@@ -1,0 +1,6 @@
+# OS Level
+.DS_Store
+
+# Compiled files
+*.o
+*.hi
