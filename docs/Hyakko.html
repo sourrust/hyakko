@@ -221,19 +221,69 @@
   </td>
   <td class='code'>
 <div class="highlight"><pre><span class="nf">languages</span> <span class="ow">::</span> <span class="kt">M</span><span class="o">.</span><span class="kt">Map</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">M</span><span class="o">.</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">String</span><span class="p">)</span>
-<span class="nf">languages</span> <span class="ow">=</span> <span class="kt">M</span><span class="o">.</span><span class="n">fromList</span> <span class="p">[</span>
-            <span class="p">(</span><span class="s">&quot;.hs&quot;</span><span class="p">,</span> <span class="kt">M</span><span class="o">.</span><span class="n">fromList</span> <span class="p">[</span>
-              <span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;haskell&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s">&quot;symbol&quot;</span><span class="p">,</span> <span class="s">&quot;--&quot;</span><span class="p">),</span>
-              <span class="p">(</span><span class="s">&quot;comment&quot;</span><span class="p">,</span> <span class="s">&quot;^( |</span><span class="se">\t</span><span class="s">)*-- ?&quot;</span><span class="p">),</span>
-              <span class="p">(</span><span class="s">&quot;dividerText&quot;</span><span class="p">,</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">--DIVIDER</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">),</span>
-              <span class="p">(</span><span class="s">&quot;dividerHtml&quot;</span><span class="p">,</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">*&lt;span class=</span><span class="se">\&quot;</span><span class="s">c1?</span><span class="se">\&quot;</span><span class="s">&gt;--DIVIDER&lt;/span&gt;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)])</span>
-            <span class="p">]</span></pre></div>
+<span class="nf">languages</span> <span class="ow">=</span>
+  <span class="kr">let</span> <span class="n">l</span> <span class="ow">=</span> <span class="kt">M</span><span class="o">.</span><span class="n">fromList</span> <span class="p">[</span>
+          <span class="p">(</span><span class="s">&quot;.hs&quot;</span><span class="p">,</span> <span class="kt">M</span><span class="o">.</span><span class="n">fromList</span> <span class="p">[</span>
+            <span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;haskell&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s">&quot;symbol&quot;</span><span class="p">,</span> <span class="s">&quot;--&quot;</span><span class="p">)]),</span>
+          <span class="p">(</span><span class="s">&quot;.coffee&quot;</span><span class="p">,</span> <span class="kt">M</span><span class="o">.</span><span class="n">fromList</span> <span class="p">[</span>
+            <span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;coffee-script&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s">&quot;symbol&quot;</span><span class="p">,</span> <span class="s">&quot;#&quot;</span><span class="p">)]),</span>
+          <span class="p">(</span><span class="s">&quot;.js&quot;</span><span class="p">,</span> <span class="kt">M</span><span class="o">.</span><span class="n">fromList</span> <span class="p">[</span>
+            <span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;javascript&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s">&quot;symbol&quot;</span><span class="p">,</span> <span class="s">&quot;//&quot;</span><span class="p">)]),</span>
+          <span class="p">(</span><span class="s">&quot;.py&quot;</span><span class="p">,</span> <span class="kt">M</span><span class="o">.</span><span class="n">fromList</span> <span class="p">[</span>
+            <span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;python&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s">&quot;symbol&quot;</span><span class="p">,</span> <span class="s">&quot;#&quot;</span><span class="p">)]),</span>
+          <span class="p">(</span><span class="s">&quot;.rb&quot;</span><span class="p">,</span> <span class="kt">M</span><span class="o">.</span><span class="n">fromList</span> <span class="p">[</span>
+            <span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;ruby&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s">&quot;symbol&quot;</span><span class="p">,</span> <span class="s">&quot;#&quot;</span><span class="p">)])</span>
+          <span class="p">]</span></pre></div>
   </td>
 </tr>
 <tr id='section-10'>
   <td class='docs'>
     <div class='pilwrap'>
       <a class='pilcrow' href='#section-10'>&#955;</a>
+    </div>
+<p>Build out the appropriate matchers and delimiters for each language.</p>
+  </td>
+  <td class='code'>
+<div class="highlight"><pre>  <span class="kr">in</span> <span class="kt">M</span><span class="o">.</span><span class="n">map</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="ow">-&gt;</span> <span class="kr">let</span> <span class="n">s</span> <span class="ow">=</span> <span class="n">x</span> <span class="kt">M</span><span class="o">.!</span> <span class="s">&quot;symbol&quot;</span></pre></div>
+  </td>
+</tr>
+<tr id='section-11'>
+  <td class='docs'>
+    <div class='pilwrap'>
+      <a class='pilcrow' href='#section-11'>&#955;</a>
+    </div>
+<p>Does the line begin with a comment?</p>
+  </td>
+  <td class='code'>
+<div class="highlight"><pre>    <span class="kr">in</span> <span class="kt">M</span><span class="o">.</span><span class="n">insert</span> <span class="s">&quot;comment&quot;</span> <span class="p">(</span><span class="s">&quot;^( |</span><span class="se">\t</span><span class="s">)*&quot;</span><span class="o">++</span><span class="n">s</span><span class="o">++</span><span class="s">&quot; ?&quot;</span><span class="p">)</span> <span class="o">$</span></pre></div>
+  </td>
+</tr>
+<tr id='section-12'>
+  <td class='docs'>
+    <div class='pilwrap'>
+      <a class='pilcrow' href='#section-12'>&#955;</a>
+    </div>
+<p>The dividing token we feed into Pygments, to delimit the boundaries between sections.</p>
+  </td>
+  <td class='code'>
+<div class="highlight"><pre>       <span class="kt">M</span><span class="o">.</span><span class="n">insert</span> <span class="s">&quot;dividerText&quot;</span> <span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">++</span><span class="n">s</span><span class="o">++</span><span class="s">&quot;DIVIDER</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span> <span class="o">$</span></pre></div>
+  </td>
+</tr>
+<tr id='section-13'>
+  <td class='docs'>
+    <div class='pilwrap'>
+      <a class='pilcrow' href='#section-13'>&#955;</a>
+    </div>
+<p>The mirror of <code>divider_text</code> that we expect Pygments to return. We can split on this to recover the original sections. Note: the class is &quot;c&quot; for Python and &quot;c1&quot; for the other languages</p>
+  </td>
+  <td class='code'>
+<div class="highlight"><pre>       <span class="kt">M</span><span class="o">.</span><span class="n">insert</span> <span class="s">&quot;dividerHtml&quot;</span> <span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">*&lt;span class=</span><span class="se">\&quot;</span><span class="s">c1?</span><span class="se">\&quot;</span><span class="s">&gt;&quot;</span><span class="o">++</span><span class="n">s</span><span class="o">++</span><span class="s">&quot;DIVIDER&lt;/span&gt;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span> <span class="n">x</span><span class="p">)</span> <span class="n">l</span></pre></div>
+  </td>
+</tr>
+<tr id='section-14'>
+  <td class='docs'>
+    <div class='pilwrap'>
+      <a class='pilcrow' href='#section-14'>&#955;</a>
     </div>
 <p>Get the current language we're documenting, based on the extension.</p>
   </td>
@@ -242,10 +292,10 @@
 <span class="nf">getLanguage</span> <span class="n">src</span> <span class="ow">=</span> <span class="n">languages</span> <span class="kt">M</span><span class="o">.!</span> <span class="n">takeExtension</span> <span class="n">src</span></pre></div>
   </td>
 </tr>
-<tr id='section-11'>
+<tr id='section-15'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-11'>&#955;</a>
+      <a class='pilcrow' href='#section-15'>&#955;</a>
     </div>
 <p>Compute the destination HTML path for an input source file path. If the source is <code>lib/example.hs</code>, the HTML will be at docs/example.html</p>
   </td>
@@ -254,10 +304,10 @@
 <span class="nf">destination</span> <span class="n">fp</span> <span class="ow">=</span> <span class="s">&quot;docs/&quot;</span> <span class="o">++</span> <span class="p">(</span><span class="n">takeBaseName</span> <span class="n">fp</span><span class="p">)</span> <span class="o">++</span> <span class="s">&quot;.html&quot;</span></pre></div>
   </td>
 </tr>
-<tr id='section-12'>
+<tr id='section-16'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-12'>&#955;</a>
+      <a class='pilcrow' href='#section-16'>&#955;</a>
     </div>
 <p>Ensure that the destination directory exists.</p>
   </td>
@@ -266,10 +316,10 @@
 <span class="nf">ensureDirectory</span> <span class="n">cb</span> <span class="ow">=</span> <span class="n">system</span> <span class="s">&quot;mkdir -p docs&quot;</span> <span class="o">&gt;&gt;</span> <span class="n">cb</span></pre></div>
   </td>
 </tr>
-<tr id='section-13'>
+<tr id='section-17'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-13'>&#955;</a>
+      <a class='pilcrow' href='#section-17'>&#955;</a>
     </div>
 <p>Create the template that we will use to generate the Hyakko HTML page.</p>
   </td>
@@ -279,10 +329,10 @@
   <span class="n">return</span> <span class="o">.</span> <span class="n">renderTemplate</span> <span class="n">var</span></pre></div>
   </td>
 </tr>
-<tr id='section-14'>
+<tr id='section-18'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-14'>&#955;</a>
+      <a class='pilcrow' href='#section-18'>&#955;</a>
     </div>
 <p>The CSS styles we'd like to apply to the documentation.</p>
   </td>
@@ -291,10 +341,10 @@
 <span class="nf">hyakkoStyles</span> <span class="ow">=</span> <span class="n">readDataFile</span> <span class="s">&quot;resources/hyakko.css&quot;</span></pre></div>
   </td>
 </tr>
-<tr id='section-15'>
+<tr id='section-19'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-15'>&#955;</a>
+      <a class='pilcrow' href='#section-19'>&#955;</a>
     </div>
 <p>The start and end of each Pygments highlight block.</p>
   </td>
@@ -302,16 +352,25 @@
 <div class="highlight"><pre><span class="nf">highlightStart</span><span class="p">,</span> <span class="n">highlightEnd</span><span class="p">,</span> <span class="n">highlightReplace</span> <span class="ow">::</span> <span class="kt">String</span>
 <span class="nf">highlightStart</span>   <span class="ow">=</span> <span class="s">&quot;&lt;div class=</span><span class="se">\&quot;</span><span class="s">highlight</span><span class="se">\&quot;</span><span class="s">&gt;&lt;pre&gt;&quot;</span>
 <span class="nf">highlightEnd</span>     <span class="ow">=</span> <span class="s">&quot;&lt;/pre&gt;&lt;/div&gt;&quot;</span>
-<span class="nf">highlightReplace</span> <span class="ow">=</span> <span class="n">highlightStart</span> <span class="o">++</span> <span class="s">&quot;|&quot;</span> <span class="o">++</span> <span class="n">highlightEnd</span>
-
-<span class="nf">readDataFile</span> <span class="ow">::</span> <span class="kt">FilePath</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="kt">String</span>
+<span class="nf">highlightReplace</span> <span class="ow">=</span> <span class="n">highlightStart</span> <span class="o">++</span> <span class="s">&quot;|&quot;</span> <span class="o">++</span> <span class="n">highlightEnd</span></pre></div>
+  </td>
+</tr>
+<tr id='section-20'>
+  <td class='docs'>
+    <div class='pilwrap'>
+      <a class='pilcrow' href='#section-20'>&#955;</a>
+    </div>
+<p>Reads from resource path given in cabal package</p>
+  </td>
+  <td class='code'>
+<div class="highlight"><pre><span class="nf">readDataFile</span> <span class="ow">::</span> <span class="kt">FilePath</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="kt">String</span>
 <span class="nf">readDataFile</span> <span class="n">f</span> <span class="ow">=</span> <span class="n">getDataFileName</span> <span class="n">f</span> <span class="o">&gt;&gt;=</span> <span class="n">readFile</span></pre></div>
   </td>
 </tr>
-<tr id='section-16'>
+<tr id='section-21'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-16'>&#955;</a>
+      <a class='pilcrow' href='#section-21'>&#955;</a>
     </div>
 <p>For each source file passed in as an argument, generate the documentation.</p>
   </td>
@@ -320,10 +379,10 @@
 <span class="nf">sources</span> <span class="ow">=</span> <span class="n">getArgs</span> <span class="o">&gt;&gt;=</span> <span class="n">return</span> <span class="o">.</span> <span class="n">sort</span></pre></div>
   </td>
 </tr>
-<tr id='section-17'>
+<tr id='section-22'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-17'>&#955;</a>
+      <a class='pilcrow' href='#section-22'>&#955;</a>
     </div>
 <p>Run the script.</p>
   </td>

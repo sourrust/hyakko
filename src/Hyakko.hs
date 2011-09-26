@@ -134,13 +134,30 @@ generateHTML src section = do
 -- the name of the Pygments lexer and the symbol that indicates a comment. To
 -- add another language to Hyakko's repertoire, add it here.
 languages :: M.Map String (M.Map String String)
-languages = M.fromList [
-            (".hs", M.fromList [
-              ("name", "haskell"), ("symbol", "--"),
-              ("comment", "^( |\t)*-- ?"),
-              ("dividerText", "\n--DIVIDER\n"),
-              ("dividerHtml", "\n*<span class=\"c1?\">--DIVIDER</span>\n")])
-            ]
+languages =
+  let l = M.fromList [
+          (".hs", M.fromList [
+            ("name", "haskell"), ("symbol", "--")]),
+          (".coffee", M.fromList [
+            ("name", "coffee-script"), ("symbol", "#")]),
+          (".js", M.fromList [
+            ("name", "javascript"), ("symbol", "//")]),
+          (".py", M.fromList [
+            ("name", "python"), ("symbol", "#")]),
+          (".rb", M.fromList [
+            ("name", "ruby"), ("symbol", "#")])
+          ]
+  -- Build out the appropriate matchers and delimiters for each language.
+  in M.map (\x -> let s = x M.! "symbol"
+    -- Does the line begin with a comment?
+    in M.insert "comment" ("^( |\t)*"++s++" ?") $
+       -- The dividing token we feed into Pygments, to delimit the boundaries
+       -- between sections.
+       M.insert "dividerText" ("\n"++s++"DIVIDER\n") $
+       -- The mirror of `divider_text` that we expect Pygments to return. We can
+       -- split on this to recover the original sections.
+       -- Note: the class is "c" for Python and "c1" for the other languages
+       M.insert "dividerHtml" ("\n*<span class=\"c1?\">"++s++"DIVIDER</span>\n") x) l
 
 -- Get the current language we're documenting, based on the extension.
 getLanguage :: FilePath -> M.Map String String
@@ -170,6 +187,7 @@ highlightStart   = "<div class=\"highlight\"><pre>"
 highlightEnd     = "</pre></div>"
 highlightReplace = highlightStart ++ "|" ++ highlightEnd
 
+-- Reads from resource path given in cabal package
 readDataFile :: FilePath -> IO String
 readDataFile f = getDataFileName f >>= readFile
 
