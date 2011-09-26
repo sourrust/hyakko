@@ -2,9 +2,17 @@ name:             hyakko
 version:          0.1
 cabal-version:    >= 1.6
 build-type:       Simple
-author:           Jeremy Hull
+license:          MIT
+license-file:     LICENSE
+copyright:        (c) 2011 Jeremy Hull
+author:           Jeremy Hull <sourdrums@gmail.com>
+maintainer:       Jeremy Hull <sourdrums@gmail.com>
 category:         Documentation
 tested-with:      GHC == 7.0.3
+synopsis:         Documentation Generator
+description:      Hyakko is a Haskell port of Docco: the original quick-and-dirty,
+                  hundred-line-long, literate-programming-style documentation
+                  generator.
 data-files:
                   -- HTML template and CSS sytle
                   resources/hyakko.html
@@ -14,7 +22,7 @@ Flag threaded
   default:        True
 
 Executable hyakko
-  build-depends:  base >= 3,
+  build-depends:  base >= 4 && < 5,
                   ghc >= 7,
                   process >= 1,
                   filepath >= 1.2,
