@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Markdown.hs</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <link rel="stylesheet" media="all" href="hyakko.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+          <div id="jump_to">
+        Jump To &hellip;
+        <div id="jump_wrapper">
+          <div id="jump_page">
+<a class='source' href='Hyakko.html'>
+  Hyakko.hs
+</a>
+<a class='source' href='Markdown.html'>
+  Markdown.hs
+</a>
+          </div>
+        </div>
+      </div>
+        <table cellpadding="0" cellspacing="0">
+      <thead>
+        <tr>
+          <th class="docs">
+            <h1>
+              Markdown.hs
+            </h1>
+          </th>
+          <th class="code">
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+<tr id='section-1'>
+  <td class='docs'>
+    <div class='pilwrap'>
+      <a class='pilcrow' href='#section-1'>&#955;</a>
+    </div>
+
+  </td>
+  <td class='code'>
+<div class="highlight"><pre><span class="kr">module</span> <span class="nn">Text.Markdown</span> <span class="p">(</span><span class="nf">toHTML</span><span class="p">)</span> <span class="kr">where</span>
+
+<span class="kr">import</span> <span class="nn">Text.Pandoc</span>
+  <span class="p">(</span> <span class="nf">readMarkdown</span>
+  <span class="p">,</span> <span class="nf">writeHtmlString</span>
+  <span class="p">,</span> <span class="nf">defaultParserState</span>
+  <span class="p">,</span> <span class="nf">defaultWriterOptions</span>
+  <span class="p">)</span></pre></div>
+  </td>
+</tr>
+<tr id='section-2'>
+  <td class='docs'>
+    <div class='pilwrap'>
+      <a class='pilcrow' href='#section-2'>&#955;</a>
+    </div>
+<p>Function for translating Markdown to HTML since <code>Pandoc</code> has several different generators for other markup languages.</p>
+  </td>
+  <td class='code'>
+<div class="highlight"><pre><span class="nf">toHTML</span> <span class="ow">::</span> <span class="kt">String</span> <span class="ow">-&gt;</span> <span class="kt">String</span>
+<span class="nf">toHTML</span> <span class="n">s</span> <span class="ow">=</span>
+  <span class="kr">let</span> <span class="n">parse</span> <span class="ow">=</span> <span class="n">readMarkdown</span> <span class="n">defaultParserState</span> <span class="n">s</span>
+  <span class="kr">in</span> <span class="n">writeHtmlString</span> <span class="n">defaultWriterOptions</span> <span class="n">parse</span></pre></div>
+  </td>
+</tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
