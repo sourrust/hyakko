@@ -9,7 +9,7 @@ author:           Jeremy Hull <sourdrums@gmail.com>
 maintainer:       Jeremy Hull <sourdrums@gmail.com>
 category:         Documentation
 tested-with:      GHC == 7.0.3
-synopsis:         Documentation Generator
+synopsis:         Literate-style Documentation Generator
 description:      Hyakko is a Haskell port of Docco: the original quick-and-dirty,
                   hundred-line-long, literate-programming-style documentation
                   generator.

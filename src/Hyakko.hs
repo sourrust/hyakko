@@ -8,10 +8,17 @@
 --
 -- If you install Hyakko, you can run it from the command-line:
 --
---      hyakko src/*.hs
+--     hyakko src/*.hs
 --
 -- ...will generate linked HTML documentation for the named source files, saving
 -- it into a `docs` folder.
+-- The [source for Hyakko](https://github.com/sourrust/hyakko) available on GitHub.
+--
+-- To install Hyakko
+--
+--     git clone git://github.com/sourrust/hyakko.git
+--     cd hyakko
+--     cabal install
 module Main where
 
 import Text.Markdown
@@ -48,12 +55,12 @@ generateDocumentation (x:xs) = do
 -- follows it, and create an individual **section** for it.
 -- Sections take the form:
 --
---     {
---       docs_text: ...
---       docs_html: ...
---       code_text: ...
---       code_html: ...
---     }
+--     [
+--       ("docsText", ...),
+--       ("docsHtml", ...),
+--       ("codeText", ...),
+--       ("codeHtml", ...)
+--     ]
 --
 inSections :: [String] -> String -> [M.Map String String]
 inSections xs r =
