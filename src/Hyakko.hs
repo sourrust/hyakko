@@ -2,6 +2,7 @@ module Main where
 
 import Text.Markdown
 
+import qualified Data.Map as M
 import Data.List (sort)
 import Text.Pandoc.Templates
 import System.Environment (getArgs)
@@ -18,15 +19,15 @@ generateDocumentation (x:xs) = do
     generateHTML x sections
     if null xs then return () else generateDocumentation xs
 
-parse :: FilePath -> String -> [(String, String)]
+parse :: FilePath -> String -> [M.Map String String]
 
-highlight :: FilePath -> [(String, String)] -> Callback -> IO ()
+highlight :: FilePath -> [M.Map String String] -> Callback -> IO ()
 
-generateHTML :: FilePath -> [(String, String)] -> IO ()
+generateHTML :: FilePath -> [M.Map String String] -> IO ()
 
-languages :: [(String, [(String, String)])]
+languages :: M.Map String (M.Map String String)
 
-getLanguage :: FilePath -> [(String, String)]
+getLanguage :: FilePath -> M.Map String String
 
 destination :: FilePath -> FilePath
 destination fp = "docs/" ++ (takeBaseName fp) ++ ".html"
