@@ -7,6 +7,9 @@ license-file:     LICENSE
 copyright:        (c) 2011 Jeremy Hull
 author:           Jeremy Hull <sourdrums@gmail.com>
 maintainer:       Jeremy Hull <sourdrums@gmail.com>
+bug-reports:      https://github.com/sourrust/hyakko/issues
+stability:        alpha
+homepage:         http://sourrust.github.com/hyakko/
 category:         Documentation
 tested-with:      GHC == 7.0.3
 synopsis:         Literate-style Documentation Generator
@@ -17,6 +20,10 @@ data-files:
                   -- HTML template and CSS sytle
                   resources/hyakko.html
                   resources/hyakko.css
+
+source-repository head
+  type:           git
+  location:       git://github.com/sourrust/hyakko.git
 
 Flag threaded
   default:        True
