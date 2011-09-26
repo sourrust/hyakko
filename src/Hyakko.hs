@@ -36,12 +36,13 @@ type Callback' = [M.Map String String] -> IO ()
 -- up into comment/code sections, highlighting them for the appropriate language,
 -- and merging them into an HTML template.
 generateDocumentation :: [FilePath] -> IO ()
+generateDocumentation [] = return ()
 generateDocumentation (x:xs) = do
   code <- readFile x
   let sections = parse x code
   highlight x sections $ \y -> do
     generateHTML x y
-    if null xs then return () else generateDocumentation xs
+    generateDocumentation xs
 
 -- Given a string of source code, parse out each comment and the code that
 -- follows it, and create an individual **section** for it.

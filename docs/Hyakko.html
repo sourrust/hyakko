@@ -94,12 +94,13 @@
   </td>
   <td class='code'>
 <div class="highlight"><pre><span class="nf">generateDocumentation</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">FilePath</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="nf">generateDocumentation</span> <span class="kt">[]</span> <span class="ow">=</span> <span class="n">return</span> <span class="nb">()</span>
 <span class="nf">generateDocumentation</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">xs</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
   <span class="n">code</span> <span class="ow">&lt;-</span> <span class="n">readFile</span> <span class="n">x</span>
   <span class="kr">let</span> <span class="n">sections</span> <span class="ow">=</span> <span class="n">parse</span> <span class="n">x</span> <span class="n">code</span>
   <span class="n">highlight</span> <span class="n">x</span> <span class="n">sections</span> <span class="o">$</span> <span class="nf">\</span><span class="n">y</span> <span class="ow">-&gt;</span> <span class="kr">do</span>
     <span class="n">generateHTML</span> <span class="n">x</span> <span class="n">y</span>
-    <span class="kr">if</span> <span class="n">null</span> <span class="n">xs</span> <span class="kr">then</span> <span class="n">return</span> <span class="nb">()</span> <span class="kr">else</span> <span class="n">generateDocumentation</span> <span class="n">xs</span></pre></div>
+    <span class="n">generateDocumentation</span> <span class="n">xs</span></pre></div>
   </td>
 </tr>
 <tr id='section-5'>
