@@ -5,23 +5,40 @@ import Text.Markdown
 import qualified Data.Map as M
 import Data.List (sort)
 import Text.Pandoc.Templates
+import Text.Regex
+import Text.Regex.Posix ((=~))
 import System.Environment (getArgs)
 import System.FilePath (takeBaseName, takeExtension, takeFileName)
-import System.Process (system)
+import System.Process (system, readProcess)
 
-type Callback = IO ()
+type Callback  = IO ()
+type Callback' = [M.Map String String] -> IO ()
 
 generateDocumentation :: [FilePath] -> IO ()
 generateDocumentation (x:xs) = do
   code <- readFile x
   let sections = parse x code
-  highlight x sections $ do
-    generateHTML x sections
+  highlight x sections $ \y -> do
+    generateHTML x y
     if null xs then return () else generateDocumentation xs
 
 parse :: FilePath -> String -> [M.Map String String]
 
-highlight :: FilePath -> [M.Map String String] -> Callback -> IO ()
+highlight :: FilePath -> [M.Map String String] -> Callback' -> IO ()
+highlight src section cb = do
+  let language = getLanguage src
+      options  = ["-l", language M.! "name", "-f", "html", "-O", "encoding=utf-8"]
+      input = concatMap (\x -> x M.! "codeText"++(language M.! "dividerText")) section
+
+  output <- readProcess "pygments" options inputs
+
+  let output'   = subRegex (mkRegex highlightReplace) options input
+      fragments = splitRegex (mkRegex $ languages M.! "dividerText") output'
+
+  cb $ map (\x -> let s = section !! x
+    in M.insert "docsHtml" (toHTML $ s M.! "docsText") $
+       M.insert "codeHTML" (highlightStart ++ (fragments !! x) ++
+         highlightEnd) s) [0..(length sections) - 1]
 
 generateHTML :: FilePath -> [M.Map String String] -> IO ()
 generateHTML src sections = do
@@ -51,7 +68,10 @@ generateHTML src sections = do
 languages :: M.Map String (M.Map String String)
 languages = M.fromList [
             (".hs", M.fromList [
-              ("name", "haskell"), ("symbol", "--")])
+              ("name", "haskell"), ("symbol", "--"),
+              ("comment", "^( |\t)*-- ?"),
+              ("dividerText", "\n--DIVIDER\n"),
+              ("dividerHtml", "\n*<span class=\"c1?\">--DIVIDER</span>\n")])
             ]
 
 getLanguage :: FilePath -> M.Map String String
@@ -71,8 +91,9 @@ hyakkoStyles :: IO String
 hyakkoStyles = readFile "resources/hyakko.css"
 
 highlightStart, highlightEnd :: String
-highlightStart = "<div class=\"highlight\"><pre>"
-highlightEnd = "</pre></div>"
+highlightStart   = "<div class=\"highlight\"><pre>"
+highlightEnd     = "</pre></div>"
+highlightReplace = highlightStart ++ "|" ++ highlightEnd
 
 sources :: IO [FilePath]
 sources = getArgs >>= return . sort
