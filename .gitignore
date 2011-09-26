@@ -7,3 +7,6 @@
 
 # cabal build
 dist/
+
+# Generated docs
+docs/
