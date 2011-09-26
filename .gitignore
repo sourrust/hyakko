@@ -4,3 +4,6 @@
 # Compiled files
 *.o
 *.hi
+
+# cabal build
+dist/

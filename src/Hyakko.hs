@@ -24,6 +24,7 @@ import Text.Regex.Posix ((=~))
 import System.Environment (getArgs)
 import System.FilePath (takeBaseName, takeExtension, takeFileName)
 import System.Process (system, readProcess)
+import Paths_hyakko (getDataFileName)
 
 -- ### Main Documentation Generation Functions
 
@@ -156,18 +157,21 @@ ensureDirectory cb = system "mkdir -p docs" >> cb
 
 -- Create the template that we will use to generate the Hyakko HTML page.
 hyakkoTemplate :: [(String, String)] -> IO String
-hyakkoTemplate var = readFile "resources/hyakko.html" >>=
+hyakkoTemplate var = readDataFile "resources/hyakko.html" >>=
   return . renderTemplate var
 
 -- The CSS styles we'd like to apply to the documentation.
 hyakkoStyles :: IO String
-hyakkoStyles = readFile "resources/hyakko.css"
+hyakkoStyles = readDataFile "resources/hyakko.css"
 
 -- The start and end of each Pygments highlight block.
-highlightStart, highlightEnd :: String
+highlightStart, highlightEnd, highlightReplace :: String
 highlightStart   = "<div class=\"highlight\"><pre>"
 highlightEnd     = "</pre></div>"
 highlightReplace = highlightStart ++ "|" ++ highlightEnd
+
+readDataFile :: FilePath -> IO String
+readDataFile f = getDataFileName f >>= readFile
 
 -- For each source file passed in as an argument, generate the documentation.
 sources :: IO [FilePath]

@@ -58,7 +58,8 @@
 <span class="kr">import</span> <span class="nn">Text.Regex.Posix</span> <span class="p">((</span><span class="o">=~</span><span class="p">))</span>
 <span class="kr">import</span> <span class="nn">System.Environment</span> <span class="p">(</span><span class="nf">getArgs</span><span class="p">)</span>
 <span class="kr">import</span> <span class="nn">System.FilePath</span> <span class="p">(</span><span class="nf">takeBaseName</span><span class="p">,</span> <span class="nf">takeExtension</span><span class="p">,</span> <span class="nf">takeFileName</span><span class="p">)</span>
-<span class="kr">import</span> <span class="nn">System.Process</span> <span class="p">(</span><span class="nf">system</span><span class="p">,</span> <span class="nf">readProcess</span><span class="p">)</span></pre></div>
+<span class="kr">import</span> <span class="nn">System.Process</span> <span class="p">(</span><span class="nf">system</span><span class="p">,</span> <span class="nf">readProcess</span><span class="p">)</span>
+<span class="kr">import</span> <span class="nn">Paths_hyakko</span> <span class="p">(</span><span class="nf">getDataFileName</span><span class="p">)</span></pre></div>
   </td>
 </tr>
 <tr id='section-2'>
@@ -274,7 +275,7 @@
   </td>
   <td class='code'>
 <div class="highlight"><pre><span class="nf">hyakkoTemplate</span> <span class="ow">::</span> <span class="p">[(</span><span class="kt">String</span><span class="p">,</span> <span class="kt">String</span><span class="p">)]</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="kt">String</span>
-<span class="nf">hyakkoTemplate</span> <span class="n">var</span> <span class="ow">=</span> <span class="n">readFile</span> <span class="s">&quot;resources/hyakko.html&quot;</span> <span class="o">&gt;&gt;=</span>
+<span class="nf">hyakkoTemplate</span> <span class="n">var</span> <span class="ow">=</span> <span class="n">readDataFile</span> <span class="s">&quot;resources/hyakko.html&quot;</span> <span class="o">&gt;&gt;=</span>
   <span class="n">return</span> <span class="o">.</span> <span class="n">renderTemplate</span> <span class="n">var</span></pre></div>
   </td>
 </tr>
@@ -287,7 +288,7 @@
   </td>
   <td class='code'>
 <div class="highlight"><pre><span class="nf">hyakkoStyles</span> <span class="ow">::</span> <span class="kt">IO</span> <span class="kt">String</span>
-<span class="nf">hyakkoStyles</span> <span class="ow">=</span> <span class="n">readFile</span> <span class="s">&quot;resources/hyakko.css&quot;</span></pre></div>
+<span class="nf">hyakkoStyles</span> <span class="ow">=</span> <span class="n">readDataFile</span> <span class="s">&quot;resources/hyakko.css&quot;</span></pre></div>
   </td>
 </tr>
 <tr id='section-15'>
@@ -298,10 +299,13 @@
 <p>The start and end of each Pygments highlight block.</p>
   </td>
   <td class='code'>
-<div class="highlight"><pre><span class="nf">highlightStart</span><span class="p">,</span> <span class="n">highlightEnd</span> <span class="ow">::</span> <span class="kt">String</span>
+<div class="highlight"><pre><span class="nf">highlightStart</span><span class="p">,</span> <span class="n">highlightEnd</span><span class="p">,</span> <span class="n">highlightReplace</span> <span class="ow">::</span> <span class="kt">String</span>
 <span class="nf">highlightStart</span>   <span class="ow">=</span> <span class="s">&quot;&lt;div class=</span><span class="se">\&quot;</span><span class="s">highlight</span><span class="se">\&quot;</span><span class="s">&gt;&lt;pre&gt;&quot;</span>
 <span class="nf">highlightEnd</span>     <span class="ow">=</span> <span class="s">&quot;&lt;/pre&gt;&lt;/div&gt;&quot;</span>
-<span class="nf">highlightReplace</span> <span class="ow">=</span> <span class="n">highlightStart</span> <span class="o">++</span> <span class="s">&quot;|&quot;</span> <span class="o">++</span> <span class="n">highlightEnd</span></pre></div>
+<span class="nf">highlightReplace</span> <span class="ow">=</span> <span class="n">highlightStart</span> <span class="o">++</span> <span class="s">&quot;|&quot;</span> <span class="o">++</span> <span class="n">highlightEnd</span>
+
+<span class="nf">readDataFile</span> <span class="ow">::</span> <span class="kt">FilePath</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="kt">String</span>
+<span class="nf">readDataFile</span> <span class="n">f</span> <span class="ow">=</span> <span class="n">getDataFileName</span> <span class="n">f</span> <span class="o">&gt;&gt;=</span> <span class="n">readFile</span></pre></div>
   </td>
 </tr>
 <tr id='section-16'>

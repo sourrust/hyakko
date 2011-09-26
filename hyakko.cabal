@@ -1,0 +1,27 @@
+name:             hyakko
+version:          0.1
+cabal-version:    >= 1.6
+build-type:       Simple
+author:           Jeremy Hull
+category:         Documentation
+tested-with:      GHC == 7.0.3
+data-files:
+                  -- HTML template and CSS sytle
+                  resources/hyakko.html
+                  resources/hyakko.css
+
+Flag threaded
+  default:        True
+
+Executable hyakko
+  build-depends:  base >= 3,
+                  ghc >= 7,
+                  process >= 1,
+                  filepath >= 1.2,
+                  regex-compat >= 0.9,
+                  regex-posix >= 0.9,
+                  containers >= 0.4,
+                  pandoc >= 1.8.2
+  hs-source-dirs: src
+  ghc-options:    -O2 -Wall
+  main-is:        Hyakko.hs
