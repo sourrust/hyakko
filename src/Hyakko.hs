@@ -3,7 +3,7 @@ module Main where
 import Text.Markdown
 
 import qualified Data.Map as M
-import Data.List (sort)
+import Data.List (sort, groupBy)
 import Text.Pandoc.Templates
 import Text.Regex
 import Text.Regex.Posix ((=~))
@@ -22,7 +22,26 @@ generateDocumentation (x:xs) = do
     generateHTML x y
     if null xs then return () else generateDocumentation xs
 
+inSections :: [String] -> String -> [M.Map String String]
+inSections xs r =
+  let s1 = groupBy (\x y ->
+             and $ map (\z ->
+               z =~ r) [x, y]) xs
+      s2 = groupBy (\x y ->
+             and $ map (\z ->
+               not $ z !! 0 =~ r) [x , y]) s1
+      s3 = let s = map (\x -> concat x) s2
+        in if even $ length s then s else [""]:s
+      replace = unlines . map (\y -> subRegex (mkRegex r) y "")
+      clump (x:y:ys) = [("docsText", replace x),("codeText", unlines y)] :
+        if null ys then [] else clump ys
+  in [M.fromList l | l <- clump s3]
+
 parse :: FilePath -> String -> [M.Map String String]
+parse src code =
+  let line     = filter (\x -> "#!" /= take 2 x) $ lines code
+      language = getLanguage src
+  in inSections line $ language M.! "comment"
 
 highlight :: FilePath -> [M.Map String String] -> Callback' -> IO ()
 highlight src section cb = do
@@ -30,18 +49,18 @@ highlight src section cb = do
       options  = ["-l", language M.! "name", "-f", "html", "-O", "encoding=utf-8"]
       input = concatMap (\x -> x M.! "codeText"++(language M.! "dividerText")) section
 
-  output <- readProcess "pygments" options inputs
+  output <- readProcess "pygmentize" options input
 
-  let output'   = subRegex (mkRegex highlightReplace) options input
-      fragments = splitRegex (mkRegex $ languages M.! "dividerText") output'
+  let output'   = subRegex (mkRegex highlightReplace) output ""
+      fragments = splitRegex (mkRegex $ language M.! "dividerHtml") output'
 
   cb $ map (\x -> let s = section !! x
     in M.insert "docsHtml" (toHTML $ s M.! "docsText") $
-       M.insert "codeHTML" (highlightStart ++ (fragments !! x) ++
-         highlightEnd) s) [0..(length sections) - 1]
+       M.insert "codeHtml" (highlightStart ++ (fragments !! x) ++
+         highlightEnd) s) [0..(length section) - 1]
 
 generateHTML :: FilePath -> [M.Map String String] -> IO ()
-generateHTML src sections = do
+generateHTML src section = do
   let title = takeFileName src
       dest  = destination src
   source <- sources
@@ -64,6 +83,8 @@ generateHTML src sections = do
       "  </td>",
       "</tr>" ])) [0..(length section) - 1]
     ]
+  putStrLn $ "hyakko: " ++ src ++ " -> " ++ dest
+  writeFile dest html
 
 languages :: M.Map String (M.Map String String)
 languages = M.fromList [
@@ -102,7 +123,6 @@ main :: IO ()
 main = do
   style <- hyakkoStyles
   source <- sources
-  putStrLn style
   ensureDirectory $ do
     writeFile "docs/hyakko.css" style
     generateDocumentation source
