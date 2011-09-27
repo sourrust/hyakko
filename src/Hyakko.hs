@@ -64,17 +64,15 @@ generateDocumentation (x:xs) = do
 --
 inSections :: [String] -> String -> [M.Map String String]
 inSections xs r =
-  let s1 = groupBy (\x y ->
-             and $ map (\z ->
-               z =~ r) [x, y]) xs
-      s2 = groupBy (\x y ->
-             and $ map (\z ->
-               not $ z !! 0 =~ r) [x , y]) s1
-      s3 = let s = map (\x -> concat x) s2
-        in if even $ length s then s else [""]:s
+  let groupBy' t t1 = groupBy $ \x y -> and $ map (t1 . (=~ r)) [t x, t y]
       replace = unlines . map (\y -> subRegex (mkRegex r) y "")
       clump (x:y:ys) = [("docsText", replace x),("codeText", unlines y)] :
         if null ys then [] else clump ys
+
+      s1 = groupBy' id id xs
+      s2 = groupBy' head not s1
+      s3 = let s = map concat s2
+        in if even $ length s then s else [""]:s
   in [M.fromList l | l <- clump s3]
 
 parse :: FilePath -> String -> [M.Map String String]
