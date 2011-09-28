@@ -111,18 +111,76 @@ cabal install
   </td>
   <td class='code'>
 <div class="highlight"><pre><span class="nf">inSections</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">String</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">String</span> <span class="ow">-&gt;</span> <span class="p">[</span><span class="kt">M</span><span class="o">.</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">String</span><span class="p">]</span>
-<span class="nf">inSections</span> <span class="n">xs</span> <span class="n">r</span> <span class="ow">=</span>
-  <span class="kr">let</span> <span class="n">s1</span> <span class="ow">=</span> <span class="n">groupBy</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="n">y</span> <span class="ow">-&gt;</span>
-             <span class="n">and</span> <span class="o">$</span> <span class="n">map</span> <span class="p">(</span><span class="nf">\</span><span class="n">z</span> <span class="ow">-&gt;</span>
-               <span class="n">z</span> <span class="o">=~</span> <span class="n">r</span><span class="p">)</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">])</span> <span class="n">xs</span>
-      <span class="n">s2</span> <span class="ow">=</span> <span class="n">groupBy</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="n">y</span> <span class="ow">-&gt;</span>
-             <span class="n">and</span> <span class="o">$</span> <span class="n">map</span> <span class="p">(</span><span class="nf">\</span><span class="n">z</span> <span class="ow">-&gt;</span>
-               <span class="n">not</span> <span class="o">$</span> <span class="n">z</span> <span class="o">!!</span> <span class="mi">0</span> <span class="o">=~</span> <span class="n">r</span><span class="p">)</span> <span class="p">[</span><span class="n">x</span> <span class="p">,</span> <span class="n">y</span><span class="p">])</span> <span class="n">s1</span>
-      <span class="n">s3</span> <span class="ow">=</span> <span class="kr">let</span> <span class="n">s</span> <span class="ow">=</span> <span class="n">map</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="ow">-&gt;</span> <span class="n">concat</span> <span class="n">x</span><span class="p">)</span> <span class="n">s2</span>
-        <span class="kr">in</span> <span class="kr">if</span> <span class="n">even</span> <span class="o">$</span> <span class="n">length</span> <span class="n">s</span> <span class="kr">then</span> <span class="n">s</span> <span class="kr">else</span> <span class="p">[</span><span class="s">&quot;&quot;</span><span class="p">]</span><span class="kt">:</span><span class="n">s</span>
-      <span class="n">replace</span> <span class="ow">=</span> <span class="n">unlines</span> <span class="o">.</span> <span class="n">map</span> <span class="p">(</span><span class="nf">\</span><span class="n">y</span> <span class="ow">-&gt;</span> <span class="n">subRegex</span> <span class="p">(</span><span class="n">mkRegex</span> <span class="n">r</span><span class="p">)</span> <span class="n">y</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
-      <span class="n">clump</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">y</span><span class="kt">:</span><span class="n">ys</span><span class="p">)</span> <span class="ow">=</span> <span class="p">[(</span><span class="s">&quot;docsText&quot;</span><span class="p">,</span> <span class="n">replace</span> <span class="n">x</span><span class="p">),(</span><span class="s">&quot;codeText&quot;</span><span class="p">,</span> <span class="n">unlines</span> <span class="n">y</span><span class="p">)]</span> <span class="kt">:</span>
-        <span class="kr">if</span> <span class="n">null</span> <span class="n">ys</span> <span class="kr">then</span> <span class="kt">[]</span> <span class="kr">else</span> <span class="n">clump</span> <span class="n">ys</span>
+<span class="nf">inSections</span> <span class="n">xs</span> <span class="n">r</span> <span class="ow">=</span></pre></div>
+  </td>
+</tr>
+<tr id='section-6'>
+  <td class='docs'>
+    <div class='pilwrap'>
+      <a class='pilcrow' href='#section-6'>&#955;</a>
+    </div>
+<p>Generalized function used to section off code and comments</p>
+  </td>
+  <td class='code'>
+<div class="highlight"><pre>  <span class="kr">let</span> <span class="n">groupBy&#39;</span> <span class="n">t</span> <span class="n">t1</span> <span class="ow">=</span> <span class="n">groupBy</span> <span class="o">$</span> <span class="nf">\</span><span class="n">x</span> <span class="n">y</span> <span class="ow">-&gt;</span> <span class="n">and</span> <span class="o">$</span> <span class="n">map</span> <span class="p">(</span><span class="n">t1</span> <span class="o">.</span> <span class="p">(</span><span class="o">=~</span> <span class="n">r</span><span class="p">))</span> <span class="p">[</span><span class="n">t</span> <span class="n">x</span><span class="p">,</span> <span class="n">t</span> <span class="n">y</span><span class="p">]</span></pre></div>
+  </td>
+</tr>
+<tr id='section-7'>
+  <td class='docs'>
+    <div class='pilwrap'>
+      <a class='pilcrow' href='#section-7'>&#955;</a>
+    </div>
+<p>Replace the beggining comment symbol with nothing</p>
+  </td>
+  <td class='code'>
+<div class="highlight"><pre>      <span class="n">replace</span> <span class="ow">=</span> <span class="n">unlines</span> <span class="o">.</span> <span class="n">map</span> <span class="p">(</span><span class="nf">\</span><span class="n">y</span> <span class="ow">-&gt;</span> <span class="n">subRegex</span> <span class="p">(</span><span class="n">mkRegex</span> <span class="n">r</span><span class="p">)</span> <span class="n">y</span> <span class="s">&quot;&quot;</span><span class="p">)</span></pre></div>
+  </td>
+</tr>
+<tr id='section-8'>
+  <td class='docs'>
+    <div class='pilwrap'>
+      <a class='pilcrow' href='#section-8'>&#955;</a>
+    </div>
+<p>Clump sectioned off lines into doc and code text.</p>
+  </td>
+  <td class='code'>
+<div class="highlight"><pre>      <span class="n">clump</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">y</span><span class="kt">:</span><span class="n">ys</span><span class="p">)</span> <span class="ow">=</span> <span class="p">[(</span><span class="s">&quot;docsText&quot;</span><span class="p">,</span> <span class="n">replace</span> <span class="n">x</span><span class="p">),(</span><span class="s">&quot;codeText&quot;</span><span class="p">,</span> <span class="n">unlines</span> <span class="n">y</span><span class="p">)]</span> <span class="kt">:</span>
+        <span class="kr">if</span> <span class="n">null</span> <span class="n">ys</span> <span class="kr">then</span> <span class="kt">[]</span> <span class="kr">else</span> <span class="n">clump</span> <span class="n">ys</span></pre></div>
+  </td>
+</tr>
+<tr id='section-9'>
+  <td class='docs'>
+    <div class='pilwrap'>
+      <a class='pilcrow' href='#section-9'>&#955;</a>
+    </div>
+<p>Group comments into a list</p>
+  </td>
+  <td class='code'>
+<div class="highlight"><pre>      <span class="n">s1</span> <span class="ow">=</span> <span class="n">groupBy&#39;</span> <span class="n">id</span> <span class="n">id</span> <span class="n">xs</span></pre></div>
+  </td>
+</tr>
+<tr id='section-10'>
+  <td class='docs'>
+    <div class='pilwrap'>
+      <a class='pilcrow' href='#section-10'>&#955;</a>
+    </div>
+<p>Group code into a list</p>
+  </td>
+  <td class='code'>
+<div class="highlight"><pre>      <span class="n">s2</span> <span class="ow">=</span> <span class="n">groupBy&#39;</span> <span class="n">head</span> <span class="n">not</span> <span class="n">s1</span></pre></div>
+  </td>
+</tr>
+<tr id='section-11'>
+  <td class='docs'>
+    <div class='pilwrap'>
+      <a class='pilcrow' href='#section-11'>&#955;</a>
+    </div>
+<p>Ensure that the list will be an even amount of groups</p>
+  </td>
+  <td class='code'>
+<div class="highlight"><pre>      <span class="n">s3</span> <span class="ow">=</span> <span class="kr">let</span> <span class="n">s</span> <span class="ow">=</span> <span class="n">map</span> <span class="n">concat</span> <span class="n">s2</span>
+        <span class="kr">in</span> <span class="kr">if</span> <span class="n">even</span> <span class="o">$</span> <span class="n">length</span> <span class="n">s</span> <span class="kr">then</span> <span class="n">s</span> <span class="kr">else</span>
+          <span class="kr">if</span> <span class="p">(</span><span class="n">head</span> <span class="o">.</span> <span class="n">head</span><span class="p">)</span> <span class="n">s</span> <span class="o">=~</span> <span class="n">r</span> <span class="kr">then</span> <span class="n">s</span> <span class="o">++</span> <span class="p">[[</span><span class="s">&quot;&quot;</span><span class="p">]]</span> <span class="kr">else</span> <span class="p">[</span><span class="s">&quot;&quot;</span><span class="p">]</span><span class="kt">:</span><span class="n">s</span>
   <span class="kr">in</span> <span class="p">[</span><span class="kt">M</span><span class="o">.</span><span class="n">fromList</span> <span class="n">l</span> <span class="o">|</span> <span class="n">l</span> <span class="ow">&lt;-</span> <span class="n">clump</span> <span class="n">s3</span><span class="p">]</span>
 
 <span class="nf">parse</span> <span class="ow">::</span> <span class="kt">FilePath</span> <span class="ow">-&gt;</span> <span class="kt">String</span> <span class="ow">-&gt;</span> <span class="p">[</span><span class="kt">M</span><span class="o">.</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">String</span><span class="p">]</span>
@@ -132,10 +190,10 @@ cabal install
   <span class="kr">in</span> <span class="n">inSections</span> <span class="n">line</span> <span class="o">$</span> <span class="n">language</span> <span class="kt">M</span><span class="o">.!</span> <span class="s">&quot;comment&quot;</span></pre></div>
   </td>
 </tr>
-<tr id='section-6'>
+<tr id='section-12'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-6'>&#955;</a>
+      <a class='pilcrow' href='#section-12'>&#955;</a>
     </div>
 <p>Highlights a single chunk of Haskell code, using <strong>Pygments</strong> over stdio, and runs the text of its corresponding comment through <strong>Markdown</strong>, using the Markdown translator in <strong><a href="http://johnmacfarlane.net/pandoc/">Pandoc</a></strong>.</p>
 <p>We process the entire file in a single call to Pygments by inserting little marker comments between each section and then splitting the result string wherever our markers occur.</p>
@@ -158,10 +216,10 @@ cabal install
          <span class="n">highlightEnd</span><span class="p">)</span> <span class="n">s</span><span class="p">)</span> <span class="p">[</span><span class="mi">0</span><span class="o">..</span><span class="p">(</span><span class="n">length</span> <span class="n">section</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span></pre></div>
   </td>
 </tr>
-<tr id='section-7'>
+<tr id='section-13'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-7'>&#955;</a>
+      <a class='pilcrow' href='#section-13'>&#955;</a>
     </div>
 <p>Once all of the code is finished highlighting, we can generate the HTML file and write out the documentation. Pass the completed sections into the template found in <code>resources/hyakko.html</code></p>
   </td>
@@ -194,10 +252,10 @@ cabal install
   <span class="n">writeFile</span> <span class="n">dest</span> <span class="n">html</span></pre></div>
   </td>
 </tr>
-<tr id='section-8'>
+<tr id='section-14'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-8'>&#955;</a>
+      <a class='pilcrow' href='#section-14'>&#955;</a>
     </div>
 <h3 id="helpers-setup">Helpers &amp; Setup</h3>
   </td>
@@ -205,10 +263,10 @@ cabal install
 <div class="highlight"><pre></pre></div>
   </td>
 </tr>
-<tr id='section-9'>
+<tr id='section-15'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-9'>&#955;</a>
+      <a class='pilcrow' href='#section-15'>&#955;</a>
     </div>
 <p>A list of the languages that Hyakko supports, mapping the file extension to the name of the Pygments lexer and the symbol that indicates a comment. To add another language to Hyakko's repertoire, add it here.</p>
   </td>
@@ -229,10 +287,10 @@ cabal install
           <span class="p">]</span></pre></div>
   </td>
 </tr>
-<tr id='section-10'>
+<tr id='section-16'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-10'>&#955;</a>
+      <a class='pilcrow' href='#section-16'>&#955;</a>
     </div>
 <p>Build out the appropriate matchers and delimiters for each language.</p>
   </td>
@@ -240,10 +298,10 @@ cabal install
 <div class="highlight"><pre>  <span class="kr">in</span> <span class="kt">M</span><span class="o">.</span><span class="n">map</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="ow">-&gt;</span> <span class="kr">let</span> <span class="n">s</span> <span class="ow">=</span> <span class="n">x</span> <span class="kt">M</span><span class="o">.!</span> <span class="s">&quot;symbol&quot;</span></pre></div>
   </td>
 </tr>
-<tr id='section-11'>
+<tr id='section-17'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-11'>&#955;</a>
+      <a class='pilcrow' href='#section-17'>&#955;</a>
     </div>
 <p>Does the line begin with a comment?</p>
   </td>
@@ -251,10 +309,10 @@ cabal install
 <div class="highlight"><pre>    <span class="kr">in</span> <span class="kt">M</span><span class="o">.</span><span class="n">insert</span> <span class="s">&quot;comment&quot;</span> <span class="p">(</span><span class="s">&quot;^( |</span><span class="se">\t</span><span class="s">)*&quot;</span><span class="o">++</span><span class="n">s</span><span class="o">++</span><span class="s">&quot; ?&quot;</span><span class="p">)</span> <span class="o">$</span></pre></div>
   </td>
 </tr>
-<tr id='section-12'>
+<tr id='section-18'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-12'>&#955;</a>
+      <a class='pilcrow' href='#section-18'>&#955;</a>
     </div>
 <p>The dividing token we feed into Pygments, to delimit the boundaries between sections.</p>
   </td>
@@ -262,10 +320,10 @@ cabal install
 <div class="highlight"><pre>       <span class="kt">M</span><span class="o">.</span><span class="n">insert</span> <span class="s">&quot;dividerText&quot;</span> <span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">++</span><span class="n">s</span><span class="o">++</span><span class="s">&quot;DIVIDER</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span> <span class="o">$</span></pre></div>
   </td>
 </tr>
-<tr id='section-13'>
+<tr id='section-19'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-13'>&#955;</a>
+      <a class='pilcrow' href='#section-19'>&#955;</a>
     </div>
 <p>The mirror of <code>divider_text</code> that we expect Pygments to return. We can split on this to recover the original sections. Note: the class is &quot;c&quot; for Python and &quot;c1&quot; for the other languages</p>
   </td>
@@ -273,10 +331,10 @@ cabal install
 <div class="highlight"><pre>       <span class="kt">M</span><span class="o">.</span><span class="n">insert</span> <span class="s">&quot;dividerHtml&quot;</span> <span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">*&lt;span class=</span><span class="se">\&quot;</span><span class="s">c1?</span><span class="se">\&quot;</span><span class="s">&gt;&quot;</span><span class="o">++</span><span class="n">s</span><span class="o">++</span><span class="s">&quot;DIVIDER&lt;/span&gt;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span> <span class="n">x</span><span class="p">)</span> <span class="n">l</span></pre></div>
   </td>
 </tr>
-<tr id='section-14'>
+<tr id='section-20'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-14'>&#955;</a>
+      <a class='pilcrow' href='#section-20'>&#955;</a>
     </div>
 <p>Get the current language we're documenting, based on the extension.</p>
   </td>
@@ -285,10 +343,10 @@ cabal install
 <span class="nf">getLanguage</span> <span class="n">src</span> <span class="ow">=</span> <span class="n">languages</span> <span class="kt">M</span><span class="o">.!</span> <span class="n">takeExtension</span> <span class="n">src</span></pre></div>
   </td>
 </tr>
-<tr id='section-15'>
+<tr id='section-21'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-15'>&#955;</a>
+      <a class='pilcrow' href='#section-21'>&#955;</a>
     </div>
 <p>Compute the destination HTML path for an input source file path. If the source is <code>lib/example.hs</code>, the HTML will be at docs/example.html</p>
   </td>
@@ -297,10 +355,10 @@ cabal install
 <span class="nf">destination</span> <span class="n">fp</span> <span class="ow">=</span> <span class="s">&quot;docs/&quot;</span> <span class="o">++</span> <span class="p">(</span><span class="n">takeBaseName</span> <span class="n">fp</span><span class="p">)</span> <span class="o">++</span> <span class="s">&quot;.html&quot;</span></pre></div>
   </td>
 </tr>
-<tr id='section-16'>
+<tr id='section-22'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-16'>&#955;</a>
+      <a class='pilcrow' href='#section-22'>&#955;</a>
     </div>
 <p>Ensure that the destination directory exists.</p>
   </td>
@@ -309,10 +367,10 @@ cabal install
 <span class="nf">ensureDirectory</span> <span class="n">cb</span> <span class="ow">=</span> <span class="n">system</span> <span class="s">&quot;mkdir -p docs&quot;</span> <span class="o">&gt;&gt;</span> <span class="n">cb</span></pre></div>
   </td>
 </tr>
-<tr id='section-17'>
+<tr id='section-23'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-17'>&#955;</a>
+      <a class='pilcrow' href='#section-23'>&#955;</a>
     </div>
 <p>Create the template that we will use to generate the Hyakko HTML page.</p>
   </td>
@@ -322,10 +380,10 @@ cabal install
   <span class="n">return</span> <span class="o">.</span> <span class="n">renderTemplate</span> <span class="n">var</span></pre></div>
   </td>
 </tr>
-<tr id='section-18'>
+<tr id='section-24'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-18'>&#955;</a>
+      <a class='pilcrow' href='#section-24'>&#955;</a>
     </div>
 <p>The CSS styles we'd like to apply to the documentation.</p>
   </td>
@@ -334,10 +392,10 @@ cabal install
 <span class="nf">hyakkoStyles</span> <span class="ow">=</span> <span class="n">readDataFile</span> <span class="s">&quot;resources/hyakko.css&quot;</span></pre></div>
   </td>
 </tr>
-<tr id='section-19'>
+<tr id='section-25'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-19'>&#955;</a>
+      <a class='pilcrow' href='#section-25'>&#955;</a>
     </div>
 <p>The start and end of each Pygments highlight block.</p>
   </td>
@@ -348,10 +406,10 @@ cabal install
 <span class="nf">highlightReplace</span> <span class="ow">=</span> <span class="n">highlightStart</span> <span class="o">++</span> <span class="s">&quot;|&quot;</span> <span class="o">++</span> <span class="n">highlightEnd</span></pre></div>
   </td>
 </tr>
-<tr id='section-20'>
+<tr id='section-26'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-20'>&#955;</a>
+      <a class='pilcrow' href='#section-26'>&#955;</a>
     </div>
 <p>Reads from resource path given in cabal package</p>
   </td>
@@ -360,10 +418,10 @@ cabal install
 <span class="nf">readDataFile</span> <span class="n">f</span> <span class="ow">=</span> <span class="n">getDataFileName</span> <span class="n">f</span> <span class="o">&gt;&gt;=</span> <span class="n">readFile</span></pre></div>
   </td>
 </tr>
-<tr id='section-21'>
+<tr id='section-27'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-21'>&#955;</a>
+      <a class='pilcrow' href='#section-27'>&#955;</a>
     </div>
 <p>For each source file passed in as an argument, generate the documentation.</p>
   </td>
@@ -372,10 +430,10 @@ cabal install
 <span class="nf">sources</span> <span class="ow">=</span> <span class="n">getArgs</span> <span class="o">&gt;&gt;=</span> <span class="n">return</span> <span class="o">.</span> <span class="n">sort</span></pre></div>
   </td>
 </tr>
-<tr id='section-22'>
+<tr id='section-28'>
   <td class='docs'>
     <div class='pilwrap'>
-      <a class='pilcrow' href='#section-22'>&#955;</a>
+      <a class='pilcrow' href='#section-28'>&#955;</a>
     </div>
 <p>Run the script.</p>
   </td>
