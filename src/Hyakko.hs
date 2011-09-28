@@ -64,13 +64,19 @@ generateDocumentation (x:xs) = do
 --
 inSections :: [String] -> String -> [M.Map String String]
 inSections xs r =
+      -- Generalized function used to section off code and comments
   let groupBy' t t1 = groupBy $ \x y -> and $ map (t1 . (=~ r)) [t x, t y]
+      -- Replace the beggining comment symbol with nothing
       replace = unlines . map (\y -> subRegex (mkRegex r) y "")
+      -- Clump sectioned off lines into doc and code text.
       clump (x:y:ys) = [("docsText", replace x),("codeText", unlines y)] :
         if null ys then [] else clump ys
 
+      -- Group comments into a list
       s1 = groupBy' id id xs
+      -- Group code into a list
       s2 = groupBy' head not s1
+      -- Ensure that the list will be an even amount of groups
       s3 = let s = map concat s2
         in if even $ length s then s else
           if (head . head) s =~ r then s ++ [[""]] else [""]:s
