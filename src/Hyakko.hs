@@ -72,7 +72,8 @@ inSections xs r =
       s1 = groupBy' id id xs
       s2 = groupBy' head not s1
       s3 = let s = map concat s2
-        in if even $ length s then s else [""]:s
+        in if even $ length s then s else
+          if (head . head) s =~ r then s ++ [[""]] else [""]:s
   in [M.fromList l | l <- clump s3]
 
 parse :: FilePath -> String -> [M.Map String String]
