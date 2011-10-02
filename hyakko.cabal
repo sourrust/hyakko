@@ -36,6 +36,7 @@ Executable hyakko
                   regex-compat >= 0.9,
                   regex-posix >= 0.9,
                   containers >= 0.4,
+                  directory >= 1,
                   pandoc >= 1.8.2
   hs-source-dirs: src
   ghc-options:    -O2 -Wall

@@ -25,11 +25,13 @@ import Text.Markdown
 
 import qualified Data.Map as M
 import Data.List (sort, groupBy)
+import Control.Monad (filterM)
 import Text.Pandoc.Templates
 import Text.Regex
 import Text.Regex.Posix ((=~))
+import System.Directory (getDirectoryContents, doesDirectoryExist, doesFileExist)
 import System.Environment (getArgs)
-import System.FilePath (takeBaseName, takeExtension, takeFileName)
+import System.FilePath (takeBaseName, takeExtension, takeFileName, (</>))
 import System.Process (system, readProcess)
 import Paths_hyakko (getDataFileName)
 
@@ -84,7 +86,7 @@ inSections xs r =
 
 parse :: FilePath -> String -> [M.Map String String]
 parse src code =
-  let line     = filter (\x -> "#!" /= take 2 x) $ lines code
+  let line     = filter ((/=) "!#" . take 2) $ lines code
       language = getLanguage src
   in inSections line $ language M.! "comment"
 
@@ -179,7 +181,7 @@ getLanguage src = languages M.! takeExtension src
 -- Compute the destination HTML path for an input source file path. If the source
 -- is `lib/example.hs`, the HTML will be at docs/example.html
 destination :: FilePath -> FilePath
-destination fp = "docs/" ++ (takeBaseName fp) ++ ".html"
+destination fp = "docs" </> (takeBaseName fp) ++ ".html"
 
 -- Ensure that the destination directory exists.
 ensureDirectory :: Callback -> IO ()
@@ -208,11 +210,25 @@ readDataFile f = getDataFileName f >>= readFile
 sources :: IO [FilePath]
 sources = getArgs >>= return . sort
 
+-- Turns the directory give into a list of files including all of the files
+-- in sub-directories.
+unpackDirectories :: FilePath -> IO [FilePath]
+unpackDirectories d = do
+  content <- getDirectoryContents d >>= return . filter (\x -> x /= "." && x /= "..")
+  let content' = map (d </>) content
+  files <- filterM doesFileExist content'
+  subdir <- filterM doesDirectoryExist content'
+  subcontent <- mapM unpackDirectories subdir >>= return . concat
+  return (files ++ subcontent)
+
 -- Run the script.
 main :: IO ()
 main = do
   style <- hyakkoStyles
-  source <- sources
+  source <- sources >>= \xs -> do
+    let x = head xs
+    isDir <- doesDirectoryExist x
+    if isDir then unpackDirectories x else return xs
   ensureDirectory $ do
     writeFile "docs/hyakko.css" style
     generateDocumentation source
