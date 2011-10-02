@@ -208,7 +208,11 @@ readDataFile f = getDataFileName f >>= readFile
 
 -- For each source file passed in as an argument, generate the documentation.
 sources :: IO [FilePath]
-sources = getArgs >>= return . sort
+sources = getArgs >>= unpack >>= return . sort . concat
+  where
+    unpack = mapM (\x -> do
+      isDir <- doesDirectoryExist x
+      if isDir then unpackDirectories x else return [x])
 
 -- Turns the directory give into a list of files including all of the files
 -- in sub-directories.
@@ -225,10 +229,7 @@ unpackDirectories d = do
 main :: IO ()
 main = do
   style <- hyakkoStyles
-  source <- sources >>= \xs -> do
-    let x = head xs
-    isDir <- doesDirectoryExist x
-    if isDir then unpackDirectories x else return xs
+  source <- sources
   ensureDirectory $ do
     writeFile "docs/hyakko.css" style
     generateDocumentation source
