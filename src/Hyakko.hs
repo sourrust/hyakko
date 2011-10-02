@@ -218,7 +218,7 @@ sources = getArgs >>= unpack >>= return . sort . concat
 -- in sub-directories.
 unpackDirectories :: FilePath -> IO [FilePath]
 unpackDirectories d = do
-  content <- getDirectoryContents d >>= return . filter (\x -> x /= "." && x /= "..")
+  content <- getDirectoryContents d >>= return . filter (=~ "[^\\.|\\.\\.]")
   let content' = map (d </>) content
   files <- filterM doesFileExist content'
   subdir <- filterM doesDirectoryExist content'
