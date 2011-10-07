@@ -11,5 +11,15 @@
 
     Hyakko is a Haskell port or Docco: the original quick-and-dirty,
     hundred-line-long, literate-programing-style documentation generator.
+    More info: <http://sourrust.github.com/hyakko>
 
     coffeescript (original): <http://jashkenas.github.com/docco>
+
+    Other ports
+    -----------
+    Clojure: <http://fogus.me/fun/marginalia>
+    Lua:     <http://rgieseke.github.com/locco>
+    .NET:    <http://dontangg.github.com/nocco>
+    Python:  <http://fitzgen.github.com/pycco>
+    Ruby:    <http://rtomayko.github.com/rocco>
+    Shell:   <http://rtomayko.github.com/shocco>
