@@ -71,17 +71,18 @@ inSections xs r =
       -- Replace the beggining comment symbol with nothing
       replace = unlines . map (\y -> subRegex (mkRegex r) y "")
       -- Clump sectioned off lines into doc and code text.
-      clump (x:y:ys) = [("docsText", replace x),("codeText", unlines y)] :
-        if null ys then [] else clump ys
+      clump [] = []
+      clump ys@[x] = clump zs
+        where zs = if head x =~ r then ys ++ [[""]] else [""]:ys
+      clump (x:y:ys) = [("docsText", replace x),("codeText", unlines y)] : clump ys
 
       -- Group comments into a list
       s1 = groupBy' id id xs
       -- Group code into a list
       s2 = groupBy' head not s1
-      -- Ensure that the list will be an even amount of groups
-      s3 = let s = map concat s2
-        in if even $ length s then s else
-          if (head . head) s =~ r then s ++ [[""]] else [""]:s
+      -- Bring the lists together into groups of comment and groups of code
+      -- pattern.
+      s3 = map concat s2
   in [M.fromList l | l <- clump s3]
 
 parse :: FilePath -> String -> [M.Map String String]
