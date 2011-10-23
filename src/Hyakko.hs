@@ -72,9 +72,11 @@ inSections xs r =
       replace = unlines . map (\y -> subRegex (mkRegex r) y "")
       -- Clump sectioned off lines into doc and code text.
       clump [] = []
-      clump ys@[x] = clump zs
-        where zs = if head x =~ r then ys ++ [[""]] else [""]:ys
+      clump [x] = clump $ ensurePar [x]
       clump (x:y:ys) = [("docsText", replace x),("codeText", unlines y)] : clump ys
+      -- Make sure the result is in the right pairing order
+      ensurePar ys = if even $ length ys then ys else
+        if (head . head) ys =~ r then ys ++ [[""]] else [""]:ys
 
       -- Group comments into a list
       s1 = groupBy' id id xs
@@ -82,7 +84,7 @@ inSections xs r =
       s2 = groupBy' head not s1
       -- Bring the lists together into groups of comment and groups of code
       -- pattern.
-      s3 = map concat s2
+      s3 = ensurePar $ map concat s2
   in [M.fromList l | l <- clump s3]
 
 parse :: FilePath -> String -> [M.Map String String]
@@ -151,17 +153,18 @@ generateHTML src section = do
 -- add another language to Hyakko's repertoire, add it here.
 languages :: M.Map String (M.Map String String)
 languages =
-  let l = M.fromList [
+  let hashSymbol = ("symbol", "#")
+      l = M.fromList [
           (".hs", M.fromList [
             ("name", "haskell"), ("symbol", "--")]),
           (".coffee", M.fromList [
-            ("name", "coffee-script"), ("symbol", "#")]),
+            ("name", "coffee-script"), hashSymbol]),
           (".js", M.fromList [
             ("name", "javascript"), ("symbol", "//")]),
           (".py", M.fromList [
-            ("name", "python"), ("symbol", "#")]),
+            ("name", "python"), hashSymbol]),
           (".rb", M.fromList [
-            ("name", "ruby"), ("symbol", "#")])
+            ("name", "ruby"), hashSymbol])
           ]
   -- Build out the appropriate matchers and delimiters for each language.
   in M.map (\x -> let s = x M.! "symbol"
