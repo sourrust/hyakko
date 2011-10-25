@@ -28,7 +28,7 @@ import Data.List (sort, groupBy)
 import Control.Monad (filterM)
 import Text.Pandoc.Templates
 import Text.Regex
-import Text.Regex.Posix ((=~))
+import Text.Regex.PCRE ((=~))
 import System.Directory (getDirectoryContents, doesDirectoryExist, doesFileExist)
 import System.Environment (getArgs)
 import System.FilePath (takeBaseName, takeExtension, takeFileName, (</>))
@@ -66,10 +66,11 @@ generateDocumentation (x:xs) = do
 --
 inSections :: [String] -> String -> [M.Map String String]
 inSections xs r =
+  let mkRegex' = mkRegex . (=~ r)
       -- Generalized function used to section off code and comments
-  let groupBy' t t1 = groupBy $ \x y -> and $ map (t1 . (=~ r)) [t x, t y]
+      groupBy' t t1 = groupBy $ \x y -> and $ map (t1 . (=~ r)) [t x, t y]
       -- Replace the beggining comment symbol with nothing
-      replace = unlines . map (\y -> subRegex (mkRegex r) y "")
+      replace = unlines . map (\y -> subRegex (mkRegex' y) y "")
       -- Clump sectioned off lines into doc and code text.
       clump [] = []
       clump [x] = clump $ ensurePar [x]
@@ -89,7 +90,7 @@ inSections xs r =
 
 parse :: FilePath -> String -> [M.Map String String]
 parse src code =
-  let line     = filter ((/=) "!#" . take 2) $ lines code
+  let line     = filter ((/=) "#!" . take 2) $ lines code
       language = getLanguage src
   in inSections line $ language M.! "comment"
 
@@ -169,7 +170,7 @@ languages =
   -- Build out the appropriate matchers and delimiters for each language.
   in M.map (\x -> let s = x M.! "symbol"
     -- Does the line begin with a comment?
-    in M.insert "comment" ("^( |\t)*"++s++" ?") $
+    in M.insert "comment" ("^\\s*"++s++"\\s?") $
        -- The dividing token we feed into Pygments, to delimit the boundaries
        -- between sections.
        M.insert "dividerText" ("\n"++s++"DIVIDER\n") $
@@ -222,7 +223,7 @@ sources = getArgs >>= unpack >>= return . sort . concat
 -- in sub-directories.
 unpackDirectories :: FilePath -> IO [FilePath]
 unpackDirectories d = do
-  content <- getDirectoryContents d >>= return . filter (=~ "[^\\.|\\.\\.]")
+  content <- getDirectoryContents d >>= return . filter (=~ "[^\\.{1,2}]")
   let content' = map (d </>) content
   files <- filterM doesFileExist content'
   subdir <- filterM doesDirectoryExist content'
