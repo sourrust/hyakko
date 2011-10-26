@@ -23,8 +23,10 @@ module Main where
 
 import Text.Markdown
 
+import Data.Map (Map)
 import qualified Data.Map as M
 import Data.List (sort, groupBy)
+import Data.Maybe (fromJust)
 import Control.Monad (filterM)
 import Text.Pandoc.Templates
 import Text.Regex
@@ -39,7 +41,7 @@ import Paths_hyakko (getDataFileName)
 
 -- Make type signature more readable with these two `Callback` types.
 type Callback  = IO ()
-type Callback' = [M.Map String String] -> IO ()
+type Callback' = [Map String String] -> IO ()
 
 -- Generate the documentation for a source file by reading it in, splitting it
 -- up into comment/code sections, highlighting them for the appropriate language,
@@ -48,10 +50,13 @@ generateDocumentation :: [FilePath] -> IO ()
 generateDocumentation [] = return ()
 generateDocumentation (x:xs) = do
   code <- readFile x
-  let sections = parse x code
-  highlight x sections $ \y -> do
-    generateHTML x y
-    generateDocumentation xs
+  let sections = parse (getLanguage x) code
+  if null sections then
+    putStrLn $ "hyakko doesn't support the language extension " ++ takeExtension x
+    else
+      highlight x sections $ \y -> do
+        generateHTML x y
+        generateDocumentation xs
 
 -- Given a string of source code, parse out each comment and the code that
 -- follows it, and create an individual **section** for it.
@@ -64,7 +69,7 @@ generateDocumentation (x:xs) = do
 --       ("codeHtml", ...)
 --     ]
 --
-inSections :: [String] -> String -> [M.Map String String]
+inSections :: [String] -> String -> [Map String String]
 inSections xs r =
   let mkRegex' = mkRegex . (=~ r)
       -- Generalized function used to section off code and comments
@@ -88,11 +93,11 @@ inSections xs r =
       s3 = ensurePar $ map concat s2
   in [M.fromList l | l <- clump s3]
 
-parse :: FilePath -> String -> [M.Map String String]
-parse src code =
+parse :: Maybe (Map String String) -> String -> [Map String String]
+parse Nothing _ = []
+parse (Just src) code =
   let line     = filter ((/=) "#!" . take 2) $ lines code
-      language = getLanguage src
-  in inSections line $ language M.! "comment"
+  in inSections line $ src M.! "comment"
 
 -- Highlights a single chunk of Haskell code, using **Pygments** over stdio,
 -- and runs the text of its corresponding comment through **Markdown**, using the
@@ -101,9 +106,9 @@ parse src code =
 -- We process the entire file in a single call to Pygments by inserting little
 -- marker comments between each section and then splitting the result string
 -- wherever our markers occur.
-highlight :: FilePath -> [M.Map String String] -> Callback' -> IO ()
+highlight :: FilePath -> [Map String String] -> Callback' -> IO ()
 highlight src section cb = do
-  let language = getLanguage src
+  let language = fromJust $ getLanguage src
       options  = ["-l", language M.! "name", "-f", "html", "-O", "encoding=utf-8"]
       input = concatMap (\x -> x M.! "codeText"++(language M.! "dividerText")) section
 
@@ -120,7 +125,7 @@ highlight src section cb = do
 -- Once all of the code is finished highlighting, we can generate the HTML file
 -- and write out the documentation. Pass the completed sections into the template
 -- found in `resources/hyakko.html`
-generateHTML :: FilePath -> [M.Map String String] -> IO ()
+generateHTML :: FilePath -> [Map String String] -> IO ()
 generateHTML src section = do
   let title = takeFileName src
       dest  = destination src
@@ -152,7 +157,7 @@ generateHTML src section = do
 -- A list of the languages that Hyakko supports, mapping the file extension to
 -- the name of the Pygments lexer and the symbol that indicates a comment. To
 -- add another language to Hyakko's repertoire, add it here.
-languages :: M.Map String (M.Map String String)
+languages :: Map String (Map String String)
 languages =
   let hashSymbol = ("symbol", "#")
       l = M.fromList [
@@ -180,8 +185,8 @@ languages =
        M.insert "dividerHtml" ("\n*<span class=\"c1?\">"++s++"DIVIDER</span>\n") x) l
 
 -- Get the current language we're documenting, based on the extension.
-getLanguage :: FilePath -> M.Map String String
-getLanguage src = languages M.! takeExtension src
+getLanguage :: FilePath -> Maybe (Map String String)
+getLanguage src = M.lookup (takeExtension src) languages
 
 -- Compute the destination HTML path for an input source file path. If the source
 -- is `lib/example.hs`, the HTML will be at docs/example.html
