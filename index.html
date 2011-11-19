@@ -43,8 +43,10 @@ cabal install
 
 <span class="kr">import</span> <span class="nn">Text.Markdown</span>
 
+<span class="kr">import</span> <span class="nn">Data.Map</span> <span class="p">(</span><span class="kt">Map</span><span class="p">)</span>
 <span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Data.Map</span> <span class="k">as</span> <span class="n">M</span>
 <span class="kr">import</span> <span class="nn">Data.List</span> <span class="p">(</span><span class="nf">sort</span><span class="p">,</span> <span class="nf">groupBy</span><span class="p">)</span>
+<span class="kr">import</span> <span class="nn">Data.Maybe</span> <span class="p">(</span><span class="nf">fromJust</span><span class="p">)</span>
 <span class="kr">import</span> <span class="nn">Control.Monad</span> <span class="p">(</span><span class="nf">filterM</span><span class="p">)</span>
 <span class="kr">import</span> <span class="nn">Text.Pandoc.Templates</span>
 <span class="kr">import</span> <span class="nn">Text.Regex</span>
@@ -76,7 +78,7 @@ cabal install
   </td>
   <td class='code'>
 <div class="highlight"><pre><span class="kr">type</span> <span class="kt">Callback</span>  <span class="ow">=</span> <span class="kt">IO</span> <span class="nb">()</span>
-<span class="kr">type</span> <span class="kt">Callback&#39;</span> <span class="ow">=</span> <span class="p">[</span><span class="kt">M</span><span class="o">.</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">String</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span></pre></div>
+<span class="kr">type</span> <span class="kt">Callback&#39;</span> <span class="ow">=</span> <span class="p">[</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">String</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span></pre></div>
   </td>
 </tr>
 <tr id='section-4'>
@@ -91,10 +93,13 @@ cabal install
 <span class="nf">generateDocumentation</span> <span class="kt">[]</span> <span class="ow">=</span> <span class="n">return</span> <span class="nb">()</span>
 <span class="nf">generateDocumentation</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">xs</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
   <span class="n">code</span> <span class="ow">&lt;-</span> <span class="n">readFile</span> <span class="n">x</span>
-  <span class="kr">let</span> <span class="n">sections</span> <span class="ow">=</span> <span class="n">parse</span> <span class="n">x</span> <span class="n">code</span>
-  <span class="n">highlight</span> <span class="n">x</span> <span class="n">sections</span> <span class="o">$</span> <span class="nf">\</span><span class="n">y</span> <span class="ow">-&gt;</span> <span class="kr">do</span>
-    <span class="n">generateHTML</span> <span class="n">x</span> <span class="n">y</span>
-    <span class="n">generateDocumentation</span> <span class="n">xs</span></pre></div>
+  <span class="kr">let</span> <span class="n">sections</span> <span class="ow">=</span> <span class="n">parse</span> <span class="p">(</span><span class="n">getLanguage</span> <span class="n">x</span><span class="p">)</span> <span class="n">code</span>
+  <span class="kr">if</span> <span class="n">null</span> <span class="n">sections</span> <span class="kr">then</span>
+    <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">&quot;hyakko doesn&#39;t support the language extension &quot;</span> <span class="o">++</span> <span class="n">takeExtension</span> <span class="n">x</span>
+    <span class="kr">else</span>
+      <span class="n">highlight</span> <span class="n">x</span> <span class="n">sections</span> <span class="o">$</span> <span class="nf">\</span><span class="n">y</span> <span class="ow">-&gt;</span> <span class="kr">do</span>
+        <span class="n">generateHTML</span> <span class="n">x</span> <span class="n">y</span>
+        <span class="n">generateDocumentation</span> <span class="n">xs</span></pre></div>
   </td>
 </tr>
 <tr id='section-5'>
@@ -112,7 +117,7 @@ cabal install
 </code></pre>
   </td>
   <td class='code'>
-<div class="highlight"><pre><span class="nf">inSections</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">String</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">String</span> <span class="ow">-&gt;</span> <span class="p">[</span><span class="kt">M</span><span class="o">.</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">String</span><span class="p">]</span>
+<div class="highlight"><pre><span class="nf">inSections</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">String</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">String</span> <span class="ow">-&gt;</span> <span class="p">[</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">String</span><span class="p">]</span>
 <span class="nf">inSections</span> <span class="n">xs</span> <span class="n">r</span> <span class="ow">=</span>
   <span class="kr">let</span> <span class="n">mkRegex&#39;</span> <span class="ow">=</span> <span class="n">mkRegex</span> <span class="o">.</span> <span class="p">(</span><span class="o">=~</span> <span class="n">r</span><span class="p">)</span></pre></div>
   </td>
@@ -148,7 +153,7 @@ cabal install
   </td>
   <td class='code'>
 <div class="highlight"><pre>      <span class="n">clump</span> <span class="kt">[]</span> <span class="ow">=</span> <span class="kt">[]</span>
-      <span class="n">clump</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="ow">=</span> <span class="n">clump</span> <span class="o">$</span> <span class="n">ensurePar</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span>
+      <span class="n">clump</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="ow">=</span> <span class="n">clump</span> <span class="o">$</span> <span class="n">ensurePair</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span>
       <span class="n">clump</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">y</span><span class="kt">:</span><span class="n">ys</span><span class="p">)</span> <span class="ow">=</span> <span class="p">[(</span><span class="s">&quot;docsText&quot;</span><span class="p">,</span> <span class="n">replace</span> <span class="n">x</span><span class="p">),(</span><span class="s">&quot;codeText&quot;</span><span class="p">,</span> <span class="n">unlines</span> <span class="n">y</span><span class="p">)]</span> <span class="kt">:</span> <span class="n">clump</span> <span class="n">ys</span></pre></div>
   </td>
 </tr>
@@ -160,7 +165,7 @@ cabal install
 <p>Make sure the result is in the right pairing order</p>
   </td>
   <td class='code'>
-<div class="highlight"><pre>      <span class="n">ensurePar</span> <span class="n">ys</span> <span class="ow">=</span> <span class="kr">if</span> <span class="n">even</span> <span class="o">$</span> <span class="n">length</span> <span class="n">ys</span> <span class="kr">then</span> <span class="n">ys</span> <span class="kr">else</span>
+<div class="highlight"><pre>      <span class="n">ensurePair</span> <span class="n">ys</span> <span class="ow">=</span> <span class="kr">if</span> <span class="n">even</span> <span class="o">$</span> <span class="n">length</span> <span class="n">ys</span> <span class="kr">then</span> <span class="n">ys</span> <span class="kr">else</span>
         <span class="kr">if</span> <span class="p">(</span><span class="n">head</span> <span class="o">.</span> <span class="n">head</span><span class="p">)</span> <span class="n">ys</span> <span class="o">=~</span> <span class="n">r</span> <span class="kr">then</span> <span class="n">ys</span> <span class="o">++</span> <span class="p">[[</span><span class="s">&quot;&quot;</span><span class="p">]]</span> <span class="kr">else</span> <span class="p">[</span><span class="s">&quot;&quot;</span><span class="p">]</span><span class="kt">:</span><span class="n">ys</span></pre></div>
   </td>
 </tr>
@@ -194,14 +199,14 @@ cabal install
 <p>Bring the lists together into groups of comment and groups of code pattern.</p>
   </td>
   <td class='code'>
-<div class="highlight"><pre>      <span class="n">s3</span> <span class="ow">=</span> <span class="n">ensurePar</span> <span class="o">$</span> <span class="n">map</span> <span class="n">concat</span> <span class="n">s2</span>
+<div class="highlight"><pre>      <span class="n">s3</span> <span class="ow">=</span> <span class="n">ensurePair</span> <span class="o">$</span> <span class="n">map</span> <span class="n">concat</span> <span class="n">s2</span>
   <span class="kr">in</span> <span class="p">[</span><span class="kt">M</span><span class="o">.</span><span class="n">fromList</span> <span class="n">l</span> <span class="o">|</span> <span class="n">l</span> <span class="ow">&lt;-</span> <span class="n">clump</span> <span class="n">s3</span><span class="p">]</span>
 
-<span class="nf">parse</span> <span class="ow">::</span> <span class="kt">FilePath</span> <span class="ow">-&gt;</span> <span class="kt">String</span> <span class="ow">-&gt;</span> <span class="p">[</span><span class="kt">M</span><span class="o">.</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">String</span><span class="p">]</span>
-<span class="nf">parse</span> <span class="n">src</span> <span class="n">code</span> <span class="ow">=</span>
-  <span class="kr">let</span> <span class="n">line</span>     <span class="ow">=</span> <span class="n">filter</span> <span class="p">((</span><span class="o">/=</span><span class="p">)</span> <span class="s">&quot;#!&quot;</span> <span class="o">.</span> <span class="n">take</span> <span class="mi">2</span><span class="p">)</span> <span class="o">$</span> <span class="n">lines</span> <span class="n">code</span>
-      <span class="n">language</span> <span class="ow">=</span> <span class="n">getLanguage</span> <span class="n">src</span>
-  <span class="kr">in</span> <span class="n">inSections</span> <span class="n">line</span> <span class="o">$</span> <span class="n">language</span> <span class="kt">M</span><span class="o">.!</span> <span class="s">&quot;comment&quot;</span></pre></div>
+<span class="nf">parse</span> <span class="ow">::</span> <span class="kt">Maybe</span> <span class="p">(</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">String</span><span class="p">)</span> <span class="ow">-&gt;</span> <span class="kt">String</span> <span class="ow">-&gt;</span> <span class="p">[</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">String</span><span class="p">]</span>
+<span class="nf">parse</span> <span class="kt">Nothing</span> <span class="kr">_</span> <span class="ow">=</span> <span class="kt">[]</span>
+<span class="nf">parse</span> <span class="p">(</span><span class="kt">Just</span> <span class="n">src</span><span class="p">)</span> <span class="n">code</span> <span class="ow">=</span>
+  <span class="kr">let</span> <span class="n">line</span> <span class="ow">=</span> <span class="n">filter</span> <span class="p">((</span><span class="o">/=</span><span class="p">)</span> <span class="s">&quot;#!&quot;</span> <span class="o">.</span> <span class="n">take</span> <span class="mi">2</span><span class="p">)</span> <span class="o">$</span> <span class="n">lines</span> <span class="n">code</span>
+  <span class="kr">in</span> <span class="n">inSections</span> <span class="n">line</span> <span class="o">$</span> <span class="n">src</span> <span class="kt">M</span><span class="o">.!</span> <span class="s">&quot;comment&quot;</span></pre></div>
   </td>
 </tr>
 <tr id='section-13'>
@@ -213,9 +218,9 @@ cabal install
 <p>We process the entire file in a single call to Pygments by inserting little marker comments between each section and then splitting the result string wherever our markers occur.</p>
   </td>
   <td class='code'>
-<div class="highlight"><pre><span class="nf">highlight</span> <span class="ow">::</span> <span class="kt">FilePath</span> <span class="ow">-&gt;</span> <span class="p">[</span><span class="kt">M</span><span class="o">.</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">String</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">Callback&#39;</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
+<div class="highlight"><pre><span class="nf">highlight</span> <span class="ow">::</span> <span class="kt">FilePath</span> <span class="ow">-&gt;</span> <span class="p">[</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">String</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">Callback&#39;</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="nf">highlight</span> <span class="n">src</span> <span class="n">section</span> <span class="n">cb</span> <span class="ow">=</span> <span class="kr">do</span>
-  <span class="kr">let</span> <span class="n">language</span> <span class="ow">=</span> <span class="n">getLanguage</span> <span class="n">src</span>
+  <span class="kr">let</span> <span class="n">language</span> <span class="ow">=</span> <span class="n">fromJust</span> <span class="o">$</span> <span class="n">getLanguage</span> <span class="n">src</span>
       <span class="n">options</span>  <span class="ow">=</span> <span class="p">[</span><span class="s">&quot;-l&quot;</span><span class="p">,</span> <span class="n">language</span> <span class="kt">M</span><span class="o">.!</span> <span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;-f&quot;</span><span class="p">,</span> <span class="s">&quot;html&quot;</span><span class="p">,</span> <span class="s">&quot;-O&quot;</span><span class="p">,</span> <span class="s">&quot;encoding=utf-8&quot;</span><span class="p">]</span>
       <span class="n">input</span> <span class="ow">=</span> <span class="n">concatMap</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="ow">-&gt;</span> <span class="n">x</span> <span class="kt">M</span><span class="o">.!</span> <span class="s">&quot;codeText&quot;</span><span class="o">++</span><span class="p">(</span><span class="n">language</span> <span class="kt">M</span><span class="o">.!</span> <span class="s">&quot;dividerText&quot;</span><span class="p">))</span> <span class="n">section</span>
 
@@ -238,7 +243,7 @@ cabal install
 <p>Once all of the code is finished highlighting, we can generate the HTML file and write out the documentation. Pass the completed sections into the template found in <code>resources/hyakko.html</code></p>
   </td>
   <td class='code'>
-<div class="highlight"><pre><span class="nf">generateHTML</span> <span class="ow">::</span> <span class="kt">FilePath</span> <span class="ow">-&gt;</span> <span class="p">[</span><span class="kt">M</span><span class="o">.</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">String</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
+<div class="highlight"><pre><span class="nf">generateHTML</span> <span class="ow">::</span> <span class="kt">FilePath</span> <span class="ow">-&gt;</span> <span class="p">[</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">String</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="nf">generateHTML</span> <span class="n">src</span> <span class="n">section</span> <span class="ow">=</span> <span class="kr">do</span>
   <span class="kr">let</span> <span class="n">title</span> <span class="ow">=</span> <span class="n">takeFileName</span> <span class="n">src</span>
       <span class="n">dest</span>  <span class="ow">=</span> <span class="n">destination</span> <span class="n">src</span>
@@ -285,7 +290,7 @@ cabal install
 <p>A list of the languages that Hyakko supports, mapping the file extension to the name of the Pygments lexer and the symbol that indicates a comment. To add another language to Hyakko's repertoire, add it here.</p>
   </td>
   <td class='code'>
-<div class="highlight"><pre><span class="nf">languages</span> <span class="ow">::</span> <span class="kt">M</span><span class="o">.</span><span class="kt">Map</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">M</span><span class="o">.</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">String</span><span class="p">)</span>
+<div class="highlight"><pre><span class="nf">languages</span> <span class="ow">::</span> <span class="kt">Map</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">String</span><span class="p">)</span>
 <span class="nf">languages</span> <span class="ow">=</span>
   <span class="kr">let</span> <span class="n">hashSymbol</span> <span class="ow">=</span> <span class="p">(</span><span class="s">&quot;symbol&quot;</span><span class="p">,</span> <span class="s">&quot;#&quot;</span><span class="p">)</span>
       <span class="n">l</span> <span class="ow">=</span> <span class="kt">M</span><span class="o">.</span><span class="n">fromList</span> <span class="p">[</span>
@@ -354,8 +359,8 @@ cabal install
 <p>Get the current language we're documenting, based on the extension.</p>
   </td>
   <td class='code'>
-<div class="highlight"><pre><span class="nf">getLanguage</span> <span class="ow">::</span> <span class="kt">FilePath</span> <span class="ow">-&gt;</span> <span class="kt">M</span><span class="o">.</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">String</span>
-<span class="nf">getLanguage</span> <span class="n">src</span> <span class="ow">=</span> <span class="n">languages</span> <span class="kt">M</span><span class="o">.!</span> <span class="n">takeExtension</span> <span class="n">src</span></pre></div>
+<div class="highlight"><pre><span class="nf">getLanguage</span> <span class="ow">::</span> <span class="kt">FilePath</span> <span class="ow">-&gt;</span> <span class="kt">Maybe</span> <span class="p">(</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">String</span><span class="p">)</span>
+<span class="nf">getLanguage</span> <span class="n">src</span> <span class="ow">=</span> <span class="kt">M</span><span class="o">.</span><span class="n">lookup</span> <span class="p">(</span><span class="n">takeExtension</span> <span class="n">src</span><span class="p">)</span> <span class="n">languages</span></pre></div>
   </td>
 </tr>
 <tr id='section-22'>
