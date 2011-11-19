@@ -10,6 +10,6 @@ import Text.Pandoc
 -- Function for translating Markdown to HTML since `Pandoc` has several
 -- different generators for other markup languages.
 toHTML :: String -> String
-toHTML s =
-  let parse = readMarkdown defaultParserState s
-  in writeHtmlString defaultWriterOptions parse
+toHTML = writeHtmlString defaultWriterOptions . parse
+  where parse = readMarkdown defaultParserState
+{-# INLINE toHTML #-}
