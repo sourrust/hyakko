@@ -78,10 +78,10 @@ inSections xs r =
       replace = unlines . map (\y -> subRegex (mkRegex' y) y "")
       -- Clump sectioned off lines into doc and code text.
       clump [] = []
-      clump [x] = clump $ ensurePar [x]
+      clump [x] = clump $ ensurePair [x]
       clump (x:y:ys) = [("docsText", replace x),("codeText", unlines y)] : clump ys
       -- Make sure the result is in the right pairing order
-      ensurePar ys = if even $ length ys then ys else
+      ensurePair ys = if even $ length ys then ys else
         if (head . head) ys =~ r then ys ++ [[""]] else [""]:ys
 
       -- Group comments into a list
@@ -90,13 +90,13 @@ inSections xs r =
       s2 = groupBy' head not s1
       -- Bring the lists together into groups of comment and groups of code
       -- pattern.
-      s3 = ensurePar $ map concat s2
+      s3 = ensurePair $ map concat s2
   in [M.fromList l | l <- clump s3]
 
 parse :: Maybe (Map String String) -> String -> [Map String String]
 parse Nothing _ = []
 parse (Just src) code =
-  let line     = filter ((/=) "#!" . take 2) $ lines code
+  let line = filter ((/=) "#!" . take 2) $ lines code
   in inSections line $ src M.! "comment"
 
 -- Highlights a single chunk of Haskell code, using **Pygments** over stdio,
