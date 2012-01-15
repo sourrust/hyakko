@@ -19,6 +19,11 @@
 --     git clone git://github.com/sourrust/hyakko.git
 --     cd hyakko
 --     cabal install
+--
+--  or
+--
+--     cabal update
+--     cabal install hyakko
 module Main where
 
 import Text.Markdown

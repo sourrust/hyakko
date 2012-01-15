@@ -1,5 +1,5 @@
 name:             hyakko
-version:          0.2.0
+version:          0.2.1
 cabal-version:    >= 1.6
 build-type:       Simple
 license:          MIT
@@ -20,6 +20,8 @@ data-files:
                   -- HTML template and CSS sytle
                   resources/hyakko.html
                   resources/hyakko.css
+extra-source-files:
+                  src/Text/Markdown.hs
 
 source-repository head
   type:           git
