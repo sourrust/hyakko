@@ -81,17 +81,19 @@ generateDocumentation (x:xs) = do
 --       ("codeHtml", ...)
 --     ]
 --
-inSections :: [String] -> String -> [Map String String]
+inSections :: [ByteString] -> ByteString -> [Map String ByteString]
 inSections xs r =
   let mkRegex' = mkRegex . (=~ r)
       -- Generalized function used to section off code and comments
       groupBy' t t1 = groupBy $ \x y -> and $ map (t1 . (=~ r)) [t x, t y]
       -- Replace the beggining comment symbol with nothing
-      replace = unlines . map (\y -> subRegex (mkRegex' y) y "")
+      replace = L.unlines . map (\y ->
+        let y' = L.unpack y
+        in L.pack $ subRegex (mkRegex' y') y' "")
       -- Clump sectioned off lines into doc and code text.
       clump [] = []
       clump [x] = clump $ ensurePair [x]
-      clump (x:y:ys) = [("docsText", replace x),("codeText", unlines y)] : clump ys
+      clump (x:y:ys) = [("docsText", replace x),("codeText", L.unlines y)] : clump ys
       -- Make sure the result is in the right pairing order
       ensurePair ys = if even $ length ys then ys else
         if (head . head) ys =~ r then ys ++ [[""]] else [""]:ys
@@ -118,26 +120,30 @@ parse (Just src) code =
 -- We process the entire file in a single call to Pygments by inserting little
 -- marker comments between each section and then splitting the result string
 -- wherever our markers occur.
-highlight :: FilePath -> [Map String String] -> Callback' -> IO ()
+highlight :: FilePath -> [Map String ByteString] -> Callback' -> IO ()
 highlight src section cb = do
   let language = fromJust $ getLanguage src
-      options  = ["-l", language M.! "name", "-f", "html", "-O", "encoding=utf-8"]
-      input = concatMap (\x -> x M.! "codeText"++(language M.! "dividerText")) section
+      options  = ["-l", L.unpack $ language M.! "name", "-f",
+                  "html", "-O", "encoding=utf-8"]
+      input = concatMap (\x ->
+        let codeText = L.unpack $ x M.! "codeText"
+            divider  = L.unpack $ language M.! "dividerText"
+        in codeText ++ divider) section
 
   output <- readProcess "pygmentize" options input
 
   let output'   = subRegex (mkRegex highlightReplace) output ""
-      fragments = splitRegex (mkRegex $ language M.! "dividerHtml") output'
+      fragments = splitRegex (mkRegex . L.unpack $ language M.! "dividerHtml") output'
 
   cb $ map (\x -> let s = section !! x
-    in M.insert "docsHtml" (toHTML $ s M.! "docsText") $
-       M.insert "codeHtml" (highlightStart ++ (fragments !! x) ++
+    in M.insert "docsHtml" (toHTML . L.unpack $ s M.! "docsText") $
+       M.insert "codeHtml" (highlightStart >< (L.pack $ fragments !! x) ><
          highlightEnd) s) [0..(length section) - 1]
 
 -- Once all of the code is finished highlighting, we can generate the HTML file
 -- and write out the documentation. Pass the completed sections into the template
 -- found in `resources/hyakko.html`
-generateHTML :: FilePath -> [Map String String] -> IO ()
+generateHTML :: FilePath -> [Map String ByteString] -> IO ()
 generateHTML src section = do
   let title = takeFileName src
       dest  = destination src
