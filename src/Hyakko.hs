@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 -- **Hyakko** is a Haskell port of [docco](http://jashkenas.github.com/docco/):
 -- the original quick-and-dirty, hundred-line-line, literate-programming-style
 -- documentation generator. It produces HTML that displays your comments
@@ -30,6 +31,8 @@ import Text.Markdown
 
 import Data.Map (Map)
 import qualified Data.Map as M
+import Data.ByteString.Lazy.Char8 (ByteString)
+import qualified Data.ByteString.Lazy.Char8 as L
 import Data.List (sort, groupBy)
 import Data.Maybe (fromJust)
 import Control.Monad (filterM)
@@ -46,7 +49,11 @@ import Paths_hyakko (getDataFileName)
 
 -- Make type signature more readable with these two `Callback` types.
 type Callback  = IO ()
-type Callback' = [Map String String] -> IO ()
+type Callback' = [Map String ByteString] -> IO ()
+
+(><) :: ByteString -> ByteString -> ByteString
+(><) = L.append
+{-# INLINE (><) #-}
 
 -- Generate the documentation for a source file by reading it in, splitting it
 -- up into comment/code sections, highlighting them for the appropriate language,
@@ -54,7 +61,7 @@ type Callback' = [Map String String] -> IO ()
 generateDocumentation :: [FilePath] -> IO ()
 generateDocumentation [] = return ()
 generateDocumentation (x:xs) = do
-  code <- readFile x
+  code <- L.readFile x
   let sections = parse (getLanguage x) code
   if null sections then
     putStrLn $ "hyakko doesn't support the language extension " ++ takeExtension x
@@ -98,10 +105,10 @@ inSections xs r =
       s3 = ensurePair $ map concat s2
   in [M.fromList l | l <- clump s3]
 
-parse :: Maybe (Map String String) -> String -> [Map String String]
+parse :: Maybe (Map String ByteString) -> ByteString -> [Map String ByteString]
 parse Nothing _ = []
 parse (Just src) code =
-  let line = filter ((/=) "#!" . take 2) $ lines code
+  let line = filter ((/=) "#!" . L.take 2) $ L.lines code
   in inSections line $ src M.! "comment"
 
 -- Highlights a single chunk of Haskell code, using **Pygments** over stdio,
@@ -147,22 +154,22 @@ generateHTML src section = do
       "    <div class='pilwrap'>",
       "      <a class='pilcrow' href='#section-"++show (x + 1)++"'>&#955;</a>",
       "    </div>",
-      (section !! x) M.! "docsHtml",
+      L.unpack $ (section !! x) M.! "docsHtml",
       "  </td>",
       "  <td class='code'>",
-      (section !! x) M.! "codeHtml",
+      L.unpack $ (section !! x) M.! "codeHtml",
       "  </td>",
       "</tr>" ])) [0..(length section) - 1]
     ]
   putStrLn $ "hyakko: " ++ src ++ " -> " ++ dest
-  writeFile dest html
+  L.writeFile dest html
 
 -- ### Helpers & Setup
 
 -- A list of the languages that Hyakko supports, mapping the file extension to
 -- the name of the Pygments lexer and the symbol that indicates a comment. To
 -- add another language to Hyakko's repertoire, add it here.
-languages :: Map String (Map String String)
+languages :: Map String (Map String ByteString)
 languages =
   let hashSymbol = ("symbol", "#")
       l = M.fromList [
@@ -180,17 +187,17 @@ languages =
   -- Build out the appropriate matchers and delimiters for each language.
   in M.map (\x -> let s = x M.! "symbol"
     -- Does the line begin with a comment?
-    in M.insert "comment" ("^\\s*"++s++"\\s?") $
+    in M.insert "comment" ("^\\s*"><s><"\\s?") $
        -- The dividing token we feed into Pygments, to delimit the boundaries
        -- between sections.
-       M.insert "dividerText" ("\n"++s++"DIVIDER\n") $
+       M.insert "dividerText" ("\n"><s><"DIVIDER\n") $
        -- The mirror of `divider_text` that we expect Pygments to return. We can
        -- split on this to recover the original sections.
        -- Note: the class is "c" for Python and "c1" for the other languages
-       M.insert "dividerHtml" ("\n*<span class=\"c1?\">"++s++"DIVIDER</span>\n") x) l
+       M.insert "dividerHtml" ("\n*<span class=\"c1?\">"><s><"DIVIDER</span>\n") x) l
 
 -- Get the current language we're documenting, based on the extension.
-getLanguage :: FilePath -> Maybe (Map String String)
+getLanguage :: FilePath -> Maybe (Map String ByteString)
 getLanguage src = M.lookup (takeExtension src) languages
 
 -- Compute the destination HTML path for an input source file path. If the source
@@ -203,23 +210,25 @@ ensureDirectory :: Callback -> IO ()
 ensureDirectory cb = system "mkdir -p docs" >> cb
 
 -- Create the template that we will use to generate the Hyakko HTML page.
-hyakkoTemplate :: [(String, String)] -> IO String
+hyakkoTemplate :: [(String, String)] -> IO ByteString
 hyakkoTemplate var = readDataFile "resources/hyakko.html" >>=
-  return . renderTemplate var
+  return . renderTemplate var . L.unpack
 
 -- The CSS styles we'd like to apply to the documentation.
-hyakkoStyles :: IO String
+hyakkoStyles :: IO ByteString
 hyakkoStyles = readDataFile "resources/hyakko.css"
 
 -- The start and end of each Pygments highlight block.
-highlightStart, highlightEnd, highlightReplace :: String
+highlightStart, highlightEnd :: ByteString
 highlightStart   = "<div class=\"highlight\"><pre>"
 highlightEnd     = "</pre></div>"
-highlightReplace = highlightStart ++ "|" ++ highlightEnd
+
+highlightReplace :: String
+highlightReplace = L.unpack highlightStart ++ "|" ++ L.unpack highlightEnd
 
 -- Reads from resource path given in cabal package
-readDataFile :: FilePath -> IO String
-readDataFile f = getDataFileName f >>= readFile
+readDataFile :: FilePath -> IO ByteString
+readDataFile f = getDataFileName f >>= L.readFile
 
 -- For each source file passed in as an argument, generate the documentation.
 sources :: IO [FilePath]
@@ -233,7 +242,8 @@ sources = getArgs >>= unpack >>= return . sort . concat
 -- in sub-directories.
 unpackDirectories :: FilePath -> IO [FilePath]
 unpackDirectories d = do
-  content <- getDirectoryContents d >>= return . filter (=~ "[^\\.{1,2}]")
+  let reg = "[^(^\\.{1,2}$)]" :: ByteString
+  content <- getDirectoryContents d >>= return . filter (=~ reg)
   let content' = map (d </>) content
   files <- filterM doesFileExist content'
   subdir <- filterM doesDirectoryExist content'
@@ -246,5 +256,5 @@ main = do
   style <- hyakkoStyles
   source <- sources
   ensureDirectory $ do
-    writeFile "docs/hyakko.css" style
+    L.writeFile "docs/hyakko.css" style
     generateDocumentation source
