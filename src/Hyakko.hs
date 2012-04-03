@@ -82,36 +82,37 @@ generateDocumentation (x:xs) = do
 --     ]
 --
 inSections :: [ByteString] -> ByteString -> [Map String ByteString]
-inSections xs r =
-  let mkRegex' = mkRegex . (=~ r)
-      -- Generalized function used to section off code and comments
-      groupBy' t t1 = groupBy $ \x y -> and $ map (t1 . (=~ r)) [t x, t y]
-      -- Replace the beggining comment symbol with nothing
-      replace = L.unlines . map (\y ->
-        let y' = L.unpack y
-        in L.pack $ subRegex (mkRegex' y') y' "")
-      -- Clump sectioned off lines into doc and code text.
-      clump [] = []
-      clump [x] = clump $ ensurePair [x]
-      clump (x:y:ys) = [("docsText", replace x),("codeText", L.unlines y)] : clump ys
-      -- Make sure the result is in the right pairing order
-      ensurePair ys = if even $ length ys then ys else
-        if (head . head) ys =~ r then ys ++ [[""]] else [""]:ys
-
-      -- Group comments into a list
-      s1 = groupBy' id id xs
-      -- Group code into a list
-      s2 = groupBy' head not s1
-      -- Bring the lists together into groups of comment and groups of code
-      -- pattern.
-      s3 = ensurePair $ map concat s2
-  in [M.fromList l | l <- clump s3]
+inSections xs r = do
+  l <- clump s
+  return $ M.fromList l
+  where
+    -- Generalized function used to section off code and comments
+    groupBy' t t1 = groupBy $ \x y -> and $ map (t1 . (=~ r)) [t x, t y]
+    -- Replace the beggining comment symbol with nothing
+    replace = L.unlines . map (\x -> let y = L.unpack x
+                                         mkReg = mkRegex . (=~ r)
+                                     in L.pack $ subRegex (mkReg y) y "")
+    -- Clump sectioned off lines into doc and code text.
+    clump [x] = clump $ ensurePair [x]
+    clump (x:y:ys) = [("docsText", replace x),("codeText", L.unlines y)] : clump ys
+    clump _ = []
+    -- Make sure the result is in the right pairing order
+    ensurePair ys | even (length ys) = ys
+                  | otherwise = appendList [[""]]
+      where appendList | (head . head) ys =~ r = (ys ++)
+                       | otherwise             = (++ ys)
+    -- Bring the lists together into groups of comment and groups of code
+    -- pattern.
+    s = ensurePair . map concat
+                   -- Group code into a list
+                   . groupBy' head not
+                   -- Group comments into a list
+                   $ groupBy' id id xs
 
 parse :: Maybe (Map String ByteString) -> ByteString -> [Map String ByteString]
-parse Nothing _ = []
-parse (Just src) code =
-  let line = filter ((/=) "#!" . L.take 2) $ L.lines code
-  in inSections line $ src M.! "comment"
+parse Nothing _       = []
+parse (Just src) code = inSections line $ src M.! "comment"
+  where line = filter ((/=) "#!" . L.take 2) $ L.lines code
 
 -- Highlights a single chunk of Haskell code, using **Pygments** over stdio,
 -- and runs the text of its corresponding comment through **Markdown**, using the
@@ -193,14 +194,14 @@ languages =
   -- Build out the appropriate matchers and delimiters for each language.
   in M.map (\x -> let s = x M.! "symbol"
     -- Does the line begin with a comment?
-    in M.insert "comment" ("^\\s*"><s><"\\s?") $
+    in M.insert "comment" ("^\\s*"><s><"\\s?")
        -- The dividing token we feed into Pygments, to delimit the boundaries
        -- between sections.
-       M.insert "dividerText" ("\n"><s><"DIVIDER\n") $
+     . M.insert "dividerText" ("\n"><s><"DIVIDER\n")
        -- The mirror of `divider_text` that we expect Pygments to return. We can
        -- split on this to recover the original sections.
        -- Note: the class is "c" for Python and "c1" for the other languages
-       M.insert "dividerHtml" ("\n*<span class=\"c1?\">"><s><"DIVIDER</span>\n") x) l
+     $ M.insert "dividerHtml" ("\n*<span class=\"c1?\">"><s><"DIVIDER</span>\n") x) l
 
 -- Get the current language we're documenting, based on the extension.
 getLanguage :: FilePath -> Maybe (Map String ByteString)
