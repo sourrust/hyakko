@@ -9,7 +9,7 @@
 
 
 
-    Hyakko is a Haskell port or Docco: the original quick-and-dirty,
+    Hyakko is a Haskell port of Docco: the original quick-and-dirty,
     hundred-line-long, literate-programing-style documentation generator.
     More info: <http://sourrust.github.com/hyakko>
 
