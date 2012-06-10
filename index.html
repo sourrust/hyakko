@@ -40,18 +40,15 @@
     </div>
 <p><strong>Hyakko</strong> is a Haskell port of <a href="http://jashkenas.github.com/docco/">docco</a>: the original quick-and-dirty, hundred-line-line, literate-programming-style documentation generator. It produces HTML that displays your comments alongside your code. Comments are passed through <a href="http://daringfireball.net/projects/markdown/syntax">Markdown</a> and code is passed through <a href="http://pygments.org/">Pygments</a> syntax highlighting. This page is the result of running Hyakko against its own source file.</p>
 <p>If you install Hyakko, you can run it from the command-line:</p>
-<pre><code>hyakko src/*.hs
-</code></pre>
+<pre><code>hyakko src/*.hs</code></pre>
 <p>...will generate linked HTML documentation for the named source files, saving it into a <code>docs</code> folder. The <a href="https://github.com/sourrust/hyakko">source for Hyakko</a> available on GitHub.</p>
 <p>To install Hyakko</p>
 <pre><code>git clone git://github.com/sourrust/hyakko.git
 cd hyakko
-cabal install
-</code></pre>
+cabal install</code></pre>
 <p>or</p>
 <pre><code>cabal update
-cabal install hyakko
-</code></pre>
+cabal install hyakko</code></pre>
   </td>
   <td class='code'>
 <div class="highlight"><pre><span class="kr">module</span> <span class="nn">Main</span> <span class="kr">where</span>
@@ -64,7 +61,7 @@ cabal install hyakko
 <span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Data.ByteString.Lazy.Char8</span> <span class="k">as</span> <span class="n">L</span>
 <span class="kr">import</span> <span class="nn">Data.List</span> <span class="p">(</span><span class="nf">sort</span><span class="p">,</span> <span class="nf">groupBy</span><span class="p">)</span>
 <span class="kr">import</span> <span class="nn">Data.Maybe</span> <span class="p">(</span><span class="nf">fromJust</span><span class="p">)</span>
-<span class="kr">import</span> <span class="nn">Control.Monad</span> <span class="p">(</span><span class="nf">filterM</span><span class="p">)</span>
+<span class="kr">import</span> <span class="nn">Control.Monad</span> <span class="p">(</span><span class="nf">filterM</span><span class="p">,</span> <span class="p">(</span><span class="o">&gt;=&gt;</span><span class="p">))</span>
 <span class="kr">import</span> <span class="nn">Text.Pandoc.Templates</span>
 <span class="kr">import</span> <span class="nn">Text.Regex</span>
 <span class="kr">import</span> <span class="nn">Text.Regex.PCRE</span> <span class="p">((</span><span class="o">=~</span><span class="p">))</span>
@@ -134,8 +131,7 @@ cabal install hyakko
   (&quot;docsHtml&quot;, ...),
   (&quot;codeText&quot;, ...),
   (&quot;codeHtml&quot;, ...)
-]
-</code></pre>
+]</code></pre>
   </td>
   <td class='code'>
 <div class="highlight"><pre><span class="nf">inSections</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">ByteString</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">ByteString</span> <span class="ow">-&gt;</span> <span class="p">[</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">ByteString</span><span class="p">]</span>
@@ -466,7 +462,7 @@ cabal install hyakko
   </td>
   <td class='code'>
 <div class="highlight"><pre><span class="nf">readDataFile</span> <span class="ow">::</span> <span class="kt">FilePath</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="kt">ByteString</span>
-<span class="nf">readDataFile</span> <span class="n">f</span> <span class="ow">=</span> <span class="n">getDataFileName</span> <span class="n">f</span> <span class="o">&gt;&gt;=</span> <span class="kt">L</span><span class="o">.</span><span class="n">readFile</span></pre></div>
+<span class="nf">readDataFile</span> <span class="ow">=</span> <span class="n">getDataFileName</span> <span class="o">&gt;=&gt;</span> <span class="kt">L</span><span class="o">.</span><span class="n">readFile</span></pre></div>
   </td>
 </tr>
 <tr id='section-29'>
@@ -478,11 +474,12 @@ cabal install hyakko
   </td>
   <td class='code'>
 <div class="highlight"><pre><span class="nf">sources</span> <span class="ow">::</span> <span class="kt">IO</span> <span class="p">[</span><span class="kt">FilePath</span><span class="p">]</span>
-<span class="nf">sources</span> <span class="ow">=</span> <span class="n">getArgs</span> <span class="o">&gt;&gt;=</span> <span class="n">unpack</span> <span class="o">&gt;&gt;=</span> <span class="n">return</span> <span class="o">.</span> <span class="n">sort</span> <span class="o">.</span> <span class="n">concat</span>
+<span class="nf">sources</span> <span class="ow">=</span> <span class="n">getArgs</span> <span class="o">&gt;&gt;=</span> <span class="n">unpack</span>
   <span class="kr">where</span>
-    <span class="n">unpack</span> <span class="ow">=</span> <span class="n">mapM</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="ow">-&gt;</span> <span class="kr">do</span>
-      <span class="n">isDir</span> <span class="ow">&lt;-</span> <span class="n">doesDirectoryExist</span> <span class="n">x</span>
-      <span class="kr">if</span> <span class="n">isDir</span> <span class="kr">then</span> <span class="n">unpackDirectories</span> <span class="n">x</span> <span class="kr">else</span> <span class="n">return</span> <span class="p">[</span><span class="n">x</span><span class="p">])</span></pre></div>
+    <span class="n">unpack</span> <span class="ow">=</span> <span class="n">mapM</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="ow">-&gt;</span> <span class="n">doesDirectoryExist</span> <span class="n">x</span> <span class="o">&gt;&gt;=</span> <span class="n">unpack&#39;</span> <span class="n">x</span><span class="p">)</span>
+               <span class="o">&gt;=&gt;</span> <span class="n">return</span> <span class="o">.</span> <span class="n">sort</span> <span class="o">.</span> <span class="n">concat</span>
+    <span class="n">unpack&#39;</span> <span class="n">x</span> <span class="kt">True</span>  <span class="ow">=</span> <span class="n">unpackDirectories</span> <span class="n">x</span>
+    <span class="n">unpack&#39;</span> <span class="n">x</span> <span class="kt">False</span> <span class="ow">=</span> <span class="n">return</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span></pre></div>
   </td>
 </tr>
 <tr id='section-30'>
