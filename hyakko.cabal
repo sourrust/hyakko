@@ -1,5 +1,5 @@
 name:             hyakko
-version:          0.3.0
+version:          0.3.1
 cabal-version:    >= 1.6
 build-type:       Simple
 license:          MIT
@@ -11,7 +11,7 @@ bug-reports:      https://github.com/sourrust/hyakko/issues
 stability:        alpha
 homepage:         http://sourrust.github.com/hyakko/
 category:         Documentation
-tested-with:      GHC == 7.0.3
+tested-with:      GHC == 7.4.2
 synopsis:         Literate-style Documentation Generator
 description:      Hyakko is a Haskell port of Docco: the original quick-and-dirty,
                   hundred-line-long, literate-programming-style documentation
@@ -39,7 +39,7 @@ Executable hyakko
                   regex-pcre >= 0.9,
                   containers >= 0.4,
                   directory >= 1,
-                  pandoc >= 1.8.2,
+                  pandoc >= 1.10,
                   bytestring >= 0.9
   hs-source-dirs: src
   ghc-options:    -O2 -Wall
