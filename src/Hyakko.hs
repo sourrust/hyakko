@@ -40,9 +40,16 @@ import Control.Monad (filterM, (>=>))
 import Text.Pandoc.Templates
 import Text.Regex
 import Text.Regex.PCRE ((=~))
-import System.Directory (getDirectoryContents, doesDirectoryExist, doesFileExist)
+import System.Directory ( getDirectoryContents
+                        , doesDirectoryExist
+                        , doesFileExist
+                        )
 import System.Environment (getArgs)
-import System.FilePath (takeBaseName, takeExtension, takeFileName, (</>))
+import System.FilePath ( takeBaseName
+                       , takeExtension
+                       , takeFileName
+                       , (</>)
+                       )
 import System.Process (system, readProcess)
 import Paths_hyakko (getDataFileName)
 
