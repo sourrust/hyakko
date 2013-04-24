@@ -1,19 +1,20 @@
 {-# LANGUAGE OverloadedStrings #-}
--- **Hyakko** is a Haskell port of [docco](http://jashkenas.github.com/docco/):
--- the original quick-and-dirty, hundred-line-line, literate-programming-style
+-- **Hyakko** is a Haskell port of
+-- [docco](http://jashkenas.github.com/docco/): the original
+-- quick-and-dirty, hundred-line-line, literate-programming-style
 -- documentation generator. It produces HTML that displays your comments
 -- alongside your code. Comments are passed through
--- [Markdown](http://daringfireball.net/projects/markdown/syntax) and code is
--- passed through [Pygments](http://pygments.org/) syntax highlighting.
+-- [Markdown](http://daringfireball.net/projects/markdown/syntax) and code
+-- is passed through [Pygments](http://pygments.org/) syntax highlighting.
 -- This page is the result of running Hyakko against its own source file.
 --
 -- If you install Hyakko, you can run it from the command-line:
 --
 --     hyakko src/*.hs
 --
--- ...will generate linked HTML documentation for the named source files, saving
--- it into a `docs` folder.
--- The [source for Hyakko](https://github.com/sourrust/hyakko) available on GitHub.
+-- ...will generate linked HTML documentation for the named source files,
+-- saving it into a `docs` folder.  The [source for
+-- Hyakko](https://github.com/sourrust/hyakko) available on GitHub.
 --
 -- To install Hyakko
 --
@@ -55,9 +56,9 @@ type Callback' = [Map String ByteString] -> IO ()
 (><) = L.append
 {-# INLINE (><) #-}
 
--- Generate the documentation for a source file by reading it in, splitting it
--- up into comment/code sections, highlighting them for the appropriate language,
--- and merging them into an HTML template.
+-- Generate the documentation for a source file by reading it in, splitting
+-- it up into comment/code sections, highlighting them for the appropriate
+-- language, and merging them into an HTML template.
 generateDocumentation :: [FilePath] -> IO ()
 generateDocumentation [] = return ()
 generateDocumentation (x:xs) = do
@@ -71,8 +72,8 @@ generateDocumentation (x:xs) = do
         generateDocumentation xs
 
 -- Given a string of source code, parse out each comment and the code that
--- follows it, and create an individual **section** for it.
--- Sections take the form:
+-- follows it, and create an individual **section** for it. Sections take
+-- the form:
 --
 --     [
 --       ("docsText", ...),
@@ -115,12 +116,13 @@ parse (Just src) code = inSections line $ src M.! "comment"
   where line = filter ((/=) "#!" . L.take 2) $ L.lines code
 
 -- Highlights a single chunk of Haskell code, using **Pygments** over stdio,
--- and runs the text of its corresponding comment through **Markdown**, using the
--- Markdown translator in **[Pandoc](http://johnmacfarlane.net/pandoc/)**.
+-- and runs the text of its corresponding comment through **Markdown**,
+-- using the Markdown translator in
+-- **[Pandoc](http://johnmacfarlane.net/pandoc/)**.
 --
--- We process the entire file in a single call to Pygments by inserting little
--- marker comments between each section and then splitting the result string
--- wherever our markers occur.
+-- We process the entire file in a single call to Pygments by inserting
+-- little marker comments between each section and then splitting the result
+-- string wherever our markers occur.
 highlight :: FilePath -> [Map String ByteString] -> Callback' -> IO ()
 highlight src section cb = do
   let language = fromJust $ getLanguage src
@@ -141,9 +143,9 @@ highlight src section cb = do
        M.insert "codeHtml" (highlightStart >< (L.pack $ fragments !! x) ><
          highlightEnd) s) [0..(length section) - 1]
 
--- Once all of the code is finished highlighting, we can generate the HTML file
--- and write out the documentation. Pass the completed sections into the template
--- found in `resources/hyakko.html`
+-- Once all of the code is finished highlighting, we can generate the HTML
+-- file and write out the documentation. Pass the completed sections into
+-- the template found in `resources/hyakko.html`
 generateHTML :: FilePath -> [Map String ByteString] -> IO ()
 generateHTML src section = do
   let title = takeFileName src
@@ -173,9 +175,9 @@ generateHTML src section = do
 
 -- ### Helpers & Setup
 
--- A list of the languages that Hyakko supports, mapping the file extension to
--- the name of the Pygments lexer and the symbol that indicates a comment. To
--- add another language to Hyakko's repertoire, add it here.
+-- A list of the languages that Hyakko supports, mapping the file extension
+-- to the name of the Pygments lexer and the symbol that indicates a
+-- comment. To add another language to Hyakko's repertoire, add it here.
 languages :: Map String (Map String ByteString)
 languages =
   let hashSymbol = ("symbol", "#")
@@ -195,20 +197,20 @@ languages =
   in M.map (\x -> let s = x M.! "symbol"
     -- Does the line begin with a comment?
     in M.insert "comment" ("^\\s*"><s><"\\s?")
-       -- The dividing token we feed into Pygments, to delimit the boundaries
-       -- between sections.
+       -- The dividing token we feed into Pygments, to delimit the
+       -- boundaries between sections.
      . M.insert "dividerText" ("\n"><s><"DIVIDER\n")
-       -- The mirror of `divider_text` that we expect Pygments to return. We can
-       -- split on this to recover the original sections.
-       -- Note: the class is "c" for Python and "c1" for the other languages
+       -- The mirror of `divider_text` that we expect Pygments to return. We
+       -- can split on this to recover the original sections. **Note**: the
+       -- class is "c" for Python and "c1" for the other languages
      $ M.insert "dividerHtml" ("\n*<span class=\"c1?\">"><s><"DIVIDER</span>\n") x) l
 
 -- Get the current language we're documenting, based on the extension.
 getLanguage :: FilePath -> Maybe (Map String ByteString)
 getLanguage src = M.lookup (takeExtension src) languages
 
--- Compute the destination HTML path for an input source file path. If the source
--- is `lib/example.hs`, the HTML will be at docs/example.html
+-- Compute the destination HTML path for an input source file path. If the
+-- source is `lib/example.hs`, the HTML will be at docs/example.html
 destination :: FilePath -> FilePath
 destination fp = "docs" </> (takeBaseName fp) ++ ".html"
 
