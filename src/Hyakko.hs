@@ -43,6 +43,7 @@ import Text.Regex.PCRE ((=~))
 import System.Directory ( getDirectoryContents
                         , doesDirectoryExist
                         , doesFileExist
+                        , createDirectoryIfMissing
                         )
 import System.Environment (getArgs)
 import System.FilePath ( takeBaseName
@@ -50,14 +51,13 @@ import System.FilePath ( takeBaseName
                        , takeFileName
                        , (</>)
                        )
-import System.Process (system, readProcess)
+import System.Process (readProcess)
 import Paths_hyakko (getDataFileName)
 
 -- ### Main Documentation Generation Functions
 
 -- Make type signature more readable with these two `Callback` types.
-type Callback  = IO ()
-type Callback' = [Map String ByteString] -> IO ()
+type Callback = [Map String ByteString] -> IO ()
 
 (><) :: ByteString -> ByteString -> ByteString
 (><) = L.append
@@ -130,7 +130,7 @@ parse (Just src) code = inSections line $ src M.! "comment"
 -- We process the entire file in a single call to Pygments by inserting
 -- little marker comments between each section and then splitting the result
 -- string wherever our markers occur.
-highlight :: FilePath -> [Map String ByteString] -> Callback' -> IO ()
+highlight :: FilePath -> [Map String ByteString] -> Callback -> IO ()
 highlight src section cb = do
   let language = fromJust $ getLanguage src
       options  = ["-l", L.unpack $ language M.! "name", "-f",
@@ -221,10 +221,6 @@ getLanguage src = M.lookup (takeExtension src) languages
 destination :: FilePath -> FilePath
 destination fp = "docs" </> (takeBaseName fp) ++ ".html"
 
--- Ensure that the destination directory exists.
-ensureDirectory :: Callback -> IO ()
-ensureDirectory cb = system "mkdir -p docs" >> cb
-
 -- Create the template that we will use to generate the Hyakko HTML page.
 hyakkoTemplate :: [(String, String)] -> IO ByteString
 hyakkoTemplate var = readDataFile "resources/hyakko.html" >>=
@@ -272,6 +268,6 @@ main :: IO ()
 main = do
   style <- hyakkoStyles
   source <- sources
-  ensureDirectory $ do
-    L.writeFile "docs/hyakko.css" style
-    generateDocumentation source
+  createDirectoryIfMissing False "docs"
+  L.writeFile "docs/hyakko.css" style
+  generateDocumentation source
