@@ -36,7 +36,7 @@ import Data.ByteString.Lazy.Char8 (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as L
 import Data.List (sort, groupBy)
 import Data.Maybe (fromJust)
-import Control.Monad (filterM, (>=>))
+import Control.Monad (filterM, (>=>), forM)
 import Text.Pandoc.Templates
 import Text.Regex
 import Text.Regex.PCRE ((=~))
@@ -244,12 +244,15 @@ readDataFile = getDataFileName >=> L.readFile
 
 -- For each source file passed in as an argument, generate the documentation.
 sources :: IO [FilePath]
-sources = getArgs >>= unpack
-  where
-    unpack = mapM (\x -> doesDirectoryExist x >>= unpack' x)
-               >=> return . sort . concat
-    unpack' x True  = unpackDirectories x
-    unpack' x False = return [x]
+sources = do
+  args <- getArgs
+  files <- forM args $ \x -> do
+    isDir <- doesDirectoryExist x
+    if isDir then
+      unpackDirectories x
+      else
+        return [x]
+  return . sort $ concat files
 
 -- Turns the directory give into a list of files including all of the files
 -- in sub-directories.
