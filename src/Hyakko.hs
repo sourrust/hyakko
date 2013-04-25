@@ -150,6 +150,20 @@ highlight src section cb = do
        M.insert "codeHtml" (highlightStart >< (L.pack $ fragments !! x) ><
          highlightEnd) s) [0..(length section) - 1]
 
+
+-- Produces a list of anchor tags to different files in docs
+--
+--     <a class="source" href="$href-link$">$file-name$</a>
+sourceTemplate :: [FilePath] -> [(String, String)]
+sourceTemplate = map source
+  where source x = ("source", concat
+          [ "<a class=\"source\" href=\""
+          , takeFileName $ destination x
+          , "\">"
+          , takeFileName x
+          , "</a>"
+          ])
+
 -- Once all of the code is finished highlighting, we can generate the HTML
 -- file and write out the documentation. Pass the completed sections into
 -- the template found in `resources/hyakko.html`
@@ -161,9 +175,7 @@ generateHTML src section = do
   html <- hyakkoTemplate $ concat [
     [("title", title)],
     if length source > 1 then [("multi","1")] else [],
-    map (\x -> ("source", unlines [
-      "<a class='source' href='"++(takeFileName $ destination x)++"'>",
-      "  "++takeFileName x,"</a>"])) source,
+    sourceTemplate source,
     map (\x -> ("section", unlines [
       "<tr id='section-"++show (x + 1)++"'>",
       "  <td class='docs'>",
@@ -242,7 +254,8 @@ highlightReplace = L.unpack highlightStart ++ "|" ++ L.unpack highlightEnd
 readDataFile :: FilePath -> IO ByteString
 readDataFile = getDataFileName >=> L.readFile
 
--- For each source file passed in as an argument, generate the documentation.
+-- For each source file passed in as an argument, generate the
+-- documentation.
 sources :: IO [FilePath]
 sources = do
   args <- getArgs
