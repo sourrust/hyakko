@@ -243,7 +243,7 @@ generateHTML src section = do
 languages :: Map String (Map String ByteString)
 languages =
   let hashSymbol = ("symbol", "#")
-      l = M.fromList [
+      language   = M.fromList [
           (".hs", M.fromList [
             ("name", "haskell"), ("symbol", "--")]),
           (".coffee", M.fromList [
@@ -255,17 +255,25 @@ languages =
           (".rb", M.fromList [
             ("name", "ruby"), hashSymbol])
           ]
+      -- Does the line begin with a comment?
+      hasComments symbol = "^\\s*" >< symbol ><  "\\s?"
+      -- The dividing token we feed into Pygments, to delimit the boundaries
+      -- between sections.
+      tokenDivider symbol = "\n" >< symbol >< "DIVIDER\n"
+      -- The mirror of `divider_text` that we expect Pygments to return. We
+      -- can split on this to recover the original sections. **Note**: the
+      -- class is "c" for Python and "c1" for the other languages
+      htmlDivider symbol = L.concat [ "\n*<span class=\"c1?\">"
+                                    , symbol
+                                    , "DIVIDER</span>"
+                                    ]
+      intoMap lang = let symbol = lang M.! "symbol"
+                  in M.insert "comment" (hasComments symbol)
+                   . M.insert "dividerText" (tokenDivider symbol)
+                   $ M.insert "dividerHtml" (htmlDivider symbol) lang
+
   -- Build out the appropriate matchers and delimiters for each language.
-  in M.map (\x -> let s = x M.! "symbol"
-    -- Does the line begin with a comment?
-    in M.insert "comment" ("^\\s*"><s><"\\s?")
-       -- The dividing token we feed into Pygments, to delimit the
-       -- boundaries between sections.
-     . M.insert "dividerText" ("\n"><s><"DIVIDER\n")
-       -- The mirror of `divider_text` that we expect Pygments to return. We
-       -- can split on this to recover the original sections. **Note**: the
-       -- class is "c" for Python and "c1" for the other languages
-     $ M.insert "dividerHtml" ("\n*<span class=\"c1?\">"><s><"DIVIDER</span>\n") x) l
+  in M.map intoMap language
 
 -- Get the current language we're documenting, based on the extension.
 getLanguage :: FilePath -> Maybe (Map String ByteString)
