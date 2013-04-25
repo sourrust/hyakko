@@ -164,6 +164,40 @@ sourceTemplate = map source
           , "</a>"
           ])
 
+-- Produces a list of table rows that split up code and documentation
+--
+--     <tr id="section-$number$">
+--       <td class="docs">
+--         <div class="pilwrap">
+--           <a class="pilcrow" href="#section-$number$">&#955;</a>
+--         </div>
+--         $doc-html$
+--       </td>
+--       <td class="code">
+--         $code-html$
+--       </td>
+--     </tr>
+sectionTemplate :: [Map String ByteString]
+                -> [Int]
+                -> [(String, String)]
+sectionTemplate section = map sections
+  where sections x =
+          let x'   = x + 1
+              sect = section !! x
+          in ("section", concat
+             [ "<tr id=\"section-"
+             ,  show x'
+             ,  "\"><td class=\"docs\">"
+             , "<div class=\"pilwrap\">"
+             , "<a class=\"pilcrow\" href=\"#section-"
+             , show x'
+             , "\">&#955;</a></div>"
+             , L.unpack $ sect M.! "docsHtml"
+             , "</td><td class=\"code\">"
+             , L.unpack $ sect M.! "codeHtml"
+             , "</td></tr>"
+             ])
+
 -- Once all of the code is finished highlighting, we can generate the HTML
 -- file and write out the documentation. Pass the completed sections into
 -- the template found in `resources/hyakko.html`
@@ -176,19 +210,7 @@ generateHTML src section = do
     [("title", title)],
     if length source > 1 then [("multi","1")] else [],
     sourceTemplate source,
-    map (\x -> ("section", unlines [
-      "<tr id='section-"++show (x + 1)++"'>",
-      "  <td class='docs'>",
-      "    <div class='pilwrap'>",
-      "      <a class='pilcrow' href='#section-"++show (x + 1)++"'>&#955;</a>",
-      "    </div>",
-      L.unpack $ (section !! x) M.! "docsHtml",
-      "  </td>",
-      "  <td class='code'>",
-      L.unpack $ (section !! x) M.! "codeHtml",
-      "  </td>",
-      "</tr>" ])) [0..(length section) - 1]
-    ]
+    sectionTemplate section [0 .. (length section) - 1]]
   putStrLn $ "hyakko: " ++ src ++ " -> " ++ dest
   L.writeFile dest html
 
