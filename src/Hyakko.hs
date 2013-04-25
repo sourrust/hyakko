@@ -150,6 +150,10 @@ highlight src section cb = do
        M.insert "codeHtml" (highlightStart >< (L.pack $ fragments !! x) ><
          highlightEnd) s) [0..(length section) - 1]
 
+-- Determine whether or not there is a `Jump to` section
+multiTemplate :: Int -> [(String, String)]
+multiTemplate 1 = []
+multiTemplate _ = [("multi", "1")]
 
 -- Produces a list of anchor tags to different files in docs
 --
@@ -206,11 +210,12 @@ generateHTML src section = do
   let title = takeFileName src
       dest  = destination src
   source <- sources
-  html <- hyakkoTemplate $ concat [
-    [("title", title)],
-    if length source > 1 then [("multi","1")] else [],
-    sourceTemplate source,
-    sectionTemplate section [0 .. (length section) - 1]]
+  html <- hyakkoTemplate $ concat
+    [ [("title", title)]
+    , multiTemplate $ length source
+    , sourceTemplate source
+    , sectionTemplate section [0 .. (length section) - 1]
+    ]
   putStrLn $ "hyakko: " ++ src ++ " -> " ++ dest
   L.writeFile dest html
 
