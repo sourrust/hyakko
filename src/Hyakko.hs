@@ -1,19 +1,20 @@
 {-# LANGUAGE OverloadedStrings #-}
--- **Hyakko** is a Haskell port of [docco](http://jashkenas.github.com/docco/):
--- the original quick-and-dirty, hundred-line-line, literate-programming-style
+-- **Hyakko** is a Haskell port of
+-- [docco](http://jashkenas.github.com/docco/): the original
+-- quick-and-dirty, hundred-line-line, literate-programming-style
 -- documentation generator. It produces HTML that displays your comments
 -- alongside your code. Comments are passed through
--- [Markdown](http://daringfireball.net/projects/markdown/syntax) and code is
--- passed through [Pygments](http://pygments.org/) syntax highlighting.
+-- [Markdown](http://daringfireball.net/projects/markdown/syntax) and code
+-- is passed through [Pygments](http://pygments.org/) syntax highlighting.
 -- This page is the result of running Hyakko against its own source file.
 --
 -- If you install Hyakko, you can run it from the command-line:
 --
 --     hyakko src/*.hs
 --
--- ...will generate linked HTML documentation for the named source files, saving
--- it into a `docs` folder.
--- The [source for Hyakko](https://github.com/sourrust/hyakko) available on GitHub.
+-- ...will generate linked HTML documentation for the named source files,
+-- saving it into a `docs` folder.  The [source for
+-- Hyakko](https://github.com/sourrust/hyakko) available on GitHub.
 --
 -- To install Hyakko
 --
@@ -33,31 +34,35 @@ import Data.Map (Map)
 import qualified Data.Map as M
 import Data.ByteString.Lazy.Char8 (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as L
-import Data.List (sort, groupBy)
+import Data.List (sort, groupBy, genericIndex)
 import Data.Maybe (fromJust)
-import Control.Monad (filterM, (>=>))
+import Control.Monad (filterM, (>=>), forM)
 import Text.Pandoc.Templates
 import Text.Regex
 import Text.Regex.PCRE ((=~))
-import System.Directory (getDirectoryContents, doesDirectoryExist, doesFileExist)
+import System.Directory ( getDirectoryContents
+                        , doesDirectoryExist
+                        , doesFileExist
+                        , createDirectoryIfMissing
+                        )
 import System.Environment (getArgs)
-import System.FilePath (takeBaseName, takeExtension, takeFileName, (</>))
-import System.Process (system, readProcess)
+import System.FilePath ( takeBaseName
+                       , takeExtension
+                       , takeFileName
+                       , (</>)
+                       )
+import System.Process (readProcess)
 import Paths_hyakko (getDataFileName)
 
 -- ### Main Documentation Generation Functions
-
--- Make type signature more readable with these two `Callback` types.
-type Callback  = IO ()
-type Callback' = [Map String ByteString] -> IO ()
 
 (><) :: ByteString -> ByteString -> ByteString
 (><) = L.append
 {-# INLINE (><) #-}
 
--- Generate the documentation for a source file by reading it in, splitting it
--- up into comment/code sections, highlighting them for the appropriate language,
--- and merging them into an HTML template.
+-- Generate the documentation for a source file by reading it in, splitting
+-- it up into comment/code sections, highlighting them for the appropriate
+-- language, and merging them into an HTML template.
 generateDocumentation :: [FilePath] -> IO ()
 generateDocumentation [] = return ()
 generateDocumentation (x:xs) = do
@@ -65,14 +70,15 @@ generateDocumentation (x:xs) = do
   let sections = parse (getLanguage x) code
   if null sections then
     putStrLn $ "hyakko doesn't support the language extension " ++ takeExtension x
-    else
-      highlight x sections $ \y -> do
-        generateHTML x y
-        generateDocumentation xs
+    else do
+      (output, language) <- highlight x sections
+      let y = mapSections sections output language
+      generateHTML x y
+      generateDocumentation xs
 
 -- Given a string of source code, parse out each comment and the code that
--- follows it, and create an individual **section** for it.
--- Sections take the form:
+-- follows it, and create an individual **section** for it. Sections take
+-- the form:
 --
 --     [
 --       ("docsText", ...),
@@ -109,20 +115,25 @@ inSections xs r = do
                    -- Group comments into a list
                    $ groupBy' id id xs
 
-parse :: Maybe (Map String ByteString) -> ByteString -> [Map String ByteString]
+parse :: Maybe (Map String ByteString)
+      -> ByteString
+      -> [Map String ByteString]
 parse Nothing _       = []
 parse (Just src) code = inSections line $ src M.! "comment"
   where line = filter ((/=) "#!" . L.take 2) $ L.lines code
 
 -- Highlights a single chunk of Haskell code, using **Pygments** over stdio,
--- and runs the text of its corresponding comment through **Markdown**, using the
--- Markdown translator in **[Pandoc](http://johnmacfarlane.net/pandoc/)**.
+-- and runs the text of its corresponding comment through **Markdown**,
+-- using the Markdown translator in
+-- **[Pandoc](http://johnmacfarlane.net/pandoc/)**.
 --
--- We process the entire file in a single call to Pygments by inserting little
--- marker comments between each section and then splitting the result string
--- wherever our markers occur.
-highlight :: FilePath -> [Map String ByteString] -> Callback' -> IO ()
-highlight src section cb = do
+-- We process the entire file in a single call to Pygments by inserting
+-- little marker comments between each section and then splitting the result
+-- string wherever our markers occur.
+highlight :: FilePath
+          -> [Map String ByteString]
+          -> IO (String, Map String ByteString)
+highlight src section = do
   let language = fromJust $ getLanguage src
       options  = ["-l", L.unpack $ language M.! "name", "-f",
                   "html", "-O", "encoding=utf-8"]
@@ -133,53 +144,106 @@ highlight src section cb = do
 
   output <- readProcess "pygmentize" options input
 
-  let output'   = subRegex (mkRegex highlightReplace) output ""
-      fragments = splitRegex (mkRegex . L.unpack $ language M.! "dividerHtml") output'
+  return (output, language)
 
-  cb $ map (\x -> let s = section !! x
-    in M.insert "docsHtml" (toHTML . L.unpack $ s M.! "docsText") $
-       M.insert "codeHtml" (highlightStart >< (L.pack $ fragments !! x) ><
-         highlightEnd) s) [0..(length section) - 1]
+-- After `highlight` is called, there are divider inside to show when the
+-- hightlighed stop and code begins. `mapSections` is used to take out the
+-- dividers and put them into `docsHtml` and `codeHtml` sections.
+mapSections :: [Map String ByteString]
+            -> String
+            -> Map String ByteString
+            -> [Map String ByteString]
+mapSections section highlighted language =
+  let output     = subRegex (mkRegex highlightReplace) highlighted ""
+      divider    = mkRegex . L.unpack $ language M.! "dividerHtml"
+      fragments  = splitRegex divider output
+      packFrag   = L.pack . genericIndex fragments
+      docText s  = toHTML . L.unpack $ s M.! "docsText"
+      codeText i = highlightStart >< packFrag i >< highlightEnd
+      sectLength = (length section) - 1
+      intoMap x  = let sect = section !! x
+                   in M.insert "docsHtml" (docText sect) $
+                      M.insert "codeHtml" (codeText x) sect
+  in map intoMap [0 .. sectLength]
 
--- Once all of the code is finished highlighting, we can generate the HTML file
--- and write out the documentation. Pass the completed sections into the template
--- found in `resources/hyakko.html`
+-- Determine whether or not there is a `Jump to` section
+multiTemplate :: Int -> [(String, String)]
+multiTemplate 1 = []
+multiTemplate _ = [("multi", "1")]
+
+-- Produces a list of anchor tags to different files in docs
+--
+--     <a class="source" href="$href-link$">$file-name$</a>
+sourceTemplate :: [FilePath] -> [(String, String)]
+sourceTemplate = map source
+  where source x = ("source", concat
+          [ "<a class=\"source\" href=\""
+          , takeFileName $ destination x
+          , "\">"
+          , takeFileName x
+          , "</a>"
+          ])
+
+-- Produces a list of table rows that split up code and documentation
+--
+--     <tr id="section-$number$">
+--       <td class="docs">
+--         <div class="pilwrap">
+--           <a class="pilcrow" href="#section-$number$">&#955;</a>
+--         </div>
+--         $doc-html$
+--       </td>
+--       <td class="code">
+--         $code-html$
+--       </td>
+--     </tr>
+sectionTemplate :: [Map String ByteString]
+                -> [Int]
+                -> [(String, String)]
+sectionTemplate section = map sections
+  where sections x =
+          let x'   = x + 1
+              sect = section !! x
+          in ("section", concat
+             [ "<tr id=\"section-"
+             ,  show x'
+             ,  "\"><td class=\"docs\">"
+             , "<div class=\"pilwrap\">"
+             , "<a class=\"pilcrow\" href=\"#section-"
+             , show x'
+             , "\">&#955;</a></div>"
+             , L.unpack $ sect M.! "docsHtml"
+             , "</td><td class=\"code\">"
+             , L.unpack $ sect M.! "codeHtml"
+             , "</td></tr>"
+             ])
+
+-- Once all of the code is finished highlighting, we can generate the HTML
+-- file and write out the documentation. Pass the completed sections into
+-- the template found in `resources/hyakko.html`
 generateHTML :: FilePath -> [Map String ByteString] -> IO ()
 generateHTML src section = do
   let title = takeFileName src
       dest  = destination src
   source <- sources
-  html <- hyakkoTemplate $ concat [
-    [("title", title)],
-    if length source > 1 then [("multi","1")] else [],
-    map (\x -> ("source", unlines [
-      "<a class='source' href='"++(takeFileName $ destination x)++"'>",
-      "  "++takeFileName x,"</a>"])) source,
-    map (\x -> ("section", unlines [
-      "<tr id='section-"++show (x + 1)++"'>",
-      "  <td class='docs'>",
-      "    <div class='pilwrap'>",
-      "      <a class='pilcrow' href='#section-"++show (x + 1)++"'>&#955;</a>",
-      "    </div>",
-      L.unpack $ (section !! x) M.! "docsHtml",
-      "  </td>",
-      "  <td class='code'>",
-      L.unpack $ (section !! x) M.! "codeHtml",
-      "  </td>",
-      "</tr>" ])) [0..(length section) - 1]
+  html <- hyakkoTemplate $ concat
+    [ [("title", title)]
+    , multiTemplate $ length source
+    , sourceTemplate source
+    , sectionTemplate section [0 .. (length section) - 1]
     ]
   putStrLn $ "hyakko: " ++ src ++ " -> " ++ dest
   L.writeFile dest html
 
 -- ### Helpers & Setup
 
--- A list of the languages that Hyakko supports, mapping the file extension to
--- the name of the Pygments lexer and the symbol that indicates a comment. To
--- add another language to Hyakko's repertoire, add it here.
+-- A list of the languages that Hyakko supports, mapping the file extension
+-- to the name of the Pygments lexer and the symbol that indicates a
+-- comment. To add another language to Hyakko's repertoire, add it here.
 languages :: Map String (Map String ByteString)
 languages =
   let hashSymbol = ("symbol", "#")
-      l = M.fromList [
+      language   = M.fromList [
           (".hs", M.fromList [
             ("name", "haskell"), ("symbol", "--")]),
           (".coffee", M.fromList [
@@ -191,30 +255,34 @@ languages =
           (".rb", M.fromList [
             ("name", "ruby"), hashSymbol])
           ]
+      -- Does the line begin with a comment?
+      hasComments symbol = "^\\s*" >< symbol ><  "\\s?"
+      -- The dividing token we feed into Pygments, to delimit the boundaries
+      -- between sections.
+      tokenDivider symbol = "\n" >< symbol >< "DIVIDER\n"
+      -- The mirror of `divider_text` that we expect Pygments to return. We
+      -- can split on this to recover the original sections. **Note**: the
+      -- class is "c" for Python and "c1" for the other languages
+      htmlDivider symbol = L.concat [ "\n*<span class=\"c1?\">"
+                                    , symbol
+                                    , "DIVIDER</span>"
+                                    ]
+      intoMap lang = let symbol = lang M.! "symbol"
+                  in M.insert "comment" (hasComments symbol)
+                   . M.insert "dividerText" (tokenDivider symbol)
+                   $ M.insert "dividerHtml" (htmlDivider symbol) lang
+
   -- Build out the appropriate matchers and delimiters for each language.
-  in M.map (\x -> let s = x M.! "symbol"
-    -- Does the line begin with a comment?
-    in M.insert "comment" ("^\\s*"><s><"\\s?")
-       -- The dividing token we feed into Pygments, to delimit the boundaries
-       -- between sections.
-     . M.insert "dividerText" ("\n"><s><"DIVIDER\n")
-       -- The mirror of `divider_text` that we expect Pygments to return. We can
-       -- split on this to recover the original sections.
-       -- Note: the class is "c" for Python and "c1" for the other languages
-     $ M.insert "dividerHtml" ("\n*<span class=\"c1?\">"><s><"DIVIDER</span>\n") x) l
+  in M.map intoMap language
 
 -- Get the current language we're documenting, based on the extension.
 getLanguage :: FilePath -> Maybe (Map String ByteString)
 getLanguage src = M.lookup (takeExtension src) languages
 
--- Compute the destination HTML path for an input source file path. If the source
--- is `lib/example.hs`, the HTML will be at docs/example.html
+-- Compute the destination HTML path for an input source file path. If the
+-- source is `lib/example.hs`, the HTML will be at docs/example.html
 destination :: FilePath -> FilePath
 destination fp = "docs" </> (takeBaseName fp) ++ ".html"
-
--- Ensure that the destination directory exists.
-ensureDirectory :: Callback -> IO ()
-ensureDirectory cb = system "mkdir -p docs" >> cb
 
 -- Create the template that we will use to generate the Hyakko HTML page.
 hyakkoTemplate :: [(String, String)] -> IO ByteString
@@ -237,14 +305,18 @@ highlightReplace = L.unpack highlightStart ++ "|" ++ L.unpack highlightEnd
 readDataFile :: FilePath -> IO ByteString
 readDataFile = getDataFileName >=> L.readFile
 
--- For each source file passed in as an argument, generate the documentation.
+-- For each source file passed in as an argument, generate the
+-- documentation.
 sources :: IO [FilePath]
-sources = getArgs >>= unpack
-  where
-    unpack = mapM (\x -> doesDirectoryExist x >>= unpack' x)
-               >=> return . sort . concat
-    unpack' x True  = unpackDirectories x
-    unpack' x False = return [x]
+sources = do
+  args <- getArgs
+  files <- forM args $ \x -> do
+    isDir <- doesDirectoryExist x
+    if isDir then
+      unpackDirectories x
+      else
+        return [x]
+  return . sort $ concat files
 
 -- Turns the directory give into a list of files including all of the files
 -- in sub-directories.
@@ -263,6 +335,6 @@ main :: IO ()
 main = do
   style <- hyakkoStyles
   source <- sources
-  ensureDirectory $ do
-    L.writeFile "docs/hyakko.css" style
-    generateDocumentation source
+  createDirectoryIfMissing False "docs"
+  L.writeFile "docs/hyakko.css" style
+  generateDocumentation source
