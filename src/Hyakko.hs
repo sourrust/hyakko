@@ -34,7 +34,7 @@ import Data.Map (Map)
 import qualified Data.Map as M
 import Data.ByteString.Lazy.Char8 (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as L
-import Data.List (sort, groupBy)
+import Data.List (sort, groupBy, genericIndex)
 import Data.Maybe (fromJust)
 import Control.Monad (filterM, (>=>), forM)
 import Text.Pandoc.Templates
@@ -56,9 +56,6 @@ import Paths_hyakko (getDataFileName)
 
 -- ### Main Documentation Generation Functions
 
--- Make type signature more readable with these two `Callback` types.
-type Callback = [Map String ByteString] -> IO ()
-
 (><) :: ByteString -> ByteString -> ByteString
 (><) = L.append
 {-# INLINE (><) #-}
@@ -73,10 +70,11 @@ generateDocumentation (x:xs) = do
   let sections = parse (getLanguage x) code
   if null sections then
     putStrLn $ "hyakko doesn't support the language extension " ++ takeExtension x
-    else
-      highlight x sections $ \y -> do
-        generateHTML x y
-        generateDocumentation xs
+    else do
+      (output, language) <- highlight x sections
+      let y = mapSections sections output language
+      generateHTML x y
+      generateDocumentation xs
 
 -- Given a string of source code, parse out each comment and the code that
 -- follows it, and create an individual **section** for it. Sections take
@@ -117,7 +115,9 @@ inSections xs r = do
                    -- Group comments into a list
                    $ groupBy' id id xs
 
-parse :: Maybe (Map String ByteString) -> ByteString -> [Map String ByteString]
+parse :: Maybe (Map String ByteString)
+      -> ByteString
+      -> [Map String ByteString]
 parse Nothing _       = []
 parse (Just src) code = inSections line $ src M.! "comment"
   where line = filter ((/=) "#!" . L.take 2) $ L.lines code
@@ -130,8 +130,10 @@ parse (Just src) code = inSections line $ src M.! "comment"
 -- We process the entire file in a single call to Pygments by inserting
 -- little marker comments between each section and then splitting the result
 -- string wherever our markers occur.
-highlight :: FilePath -> [Map String ByteString] -> Callback -> IO ()
-highlight src section cb = do
+highlight :: FilePath
+          -> [Map String ByteString]
+          -> IO (String, Map String ByteString)
+highlight src section = do
   let language = fromJust $ getLanguage src
       options  = ["-l", L.unpack $ language M.! "name", "-f",
                   "html", "-O", "encoding=utf-8"]
@@ -142,13 +144,27 @@ highlight src section cb = do
 
   output <- readProcess "pygmentize" options input
 
-  let output'   = subRegex (mkRegex highlightReplace) output ""
-      fragments = splitRegex (mkRegex . L.unpack $ language M.! "dividerHtml") output'
+  return (output, language)
 
-  cb $ map (\x -> let s = section !! x
-    in M.insert "docsHtml" (toHTML . L.unpack $ s M.! "docsText") $
-       M.insert "codeHtml" (highlightStart >< (L.pack $ fragments !! x) ><
-         highlightEnd) s) [0..(length section) - 1]
+-- After `highlight` is called, there are divider inside to show when the
+-- hightlighed stop and code begins. `mapSections` is used to take out the
+-- dividers and put them into `docsHtml` and `codeHtml` sections.
+mapSections :: [Map String ByteString]
+            -> String
+            -> Map String ByteString
+            -> [Map String ByteString]
+mapSections section highlighted language =
+  let output     = subRegex (mkRegex highlightReplace) highlighted ""
+      divider    = mkRegex . L.unpack $ language M.! "dividerHtml"
+      fragments  = splitRegex divider output
+      packFrag   = L.pack . genericIndex fragments
+      docText s  = toHTML . L.unpack $ s M.! "docsText"
+      codeText i = highlightStart >< packFrag i >< highlightEnd
+      sectLength = (length section) - 1
+      intoMap x  = let sect = section !! x
+                   in M.insert "docsHtml" (docText sect) $
+                      M.insert "codeHtml" (codeText x) sect
+  in map intoMap [0 .. sectLength]
 
 -- Determine whether or not there is a `Jump to` section
 multiTemplate :: Int -> [(String, String)]
