@@ -34,6 +34,9 @@ import Data.Map (Map)
 import qualified Data.Map as M
 import Data.ByteString.Lazy.Char8 (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as L
+import Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import Data.List (sort, groupBy, genericIndex)
 import Data.Maybe (fromJust)
 import Control.Monad (filterM, (>=>), forM)
@@ -87,12 +90,12 @@ generateDocumentation (x:xs) = do
 --       ("codeHtml", ...)
 --     ]
 --
-inSections :: [ByteString] -> ByteString -> [Map String ByteString]
+inSections :: [Text] -> ByteString -> [Map String Text]
 inSections xs r = [M.fromList l | l <- clump sections]
   where
     -- Bring the lists together into groups of comment and groups of code
     -- pattern.
-    sections :: [[ByteString]]
+    sections :: [[Text]]
     sections = ensurePair . map concat
                           -- Group code into a list
                           . groupBy' head not
@@ -100,7 +103,7 @@ inSections xs r = [M.fromList l | l <- clump sections]
                           $ groupBy' id id xs
 
     -- Clump sectioned off lines into doc and code text.
-    clump :: [[ByteString]] -> [[(String, ByteString)]]
+    clump :: [[Text]] -> [[(String, Text)]]
     clump [x] = clump $ ensurePair [x]
     clump (x:y:ys) = [ ("docsText", replace x)
                      , ("codeText", L.unlines y)
@@ -112,22 +115,20 @@ inSections xs r = [M.fromList l | l <- clump sections]
       and $ map (t1 . (=~ r)) [t x, t y]
 
     -- Replace the beggining comment symbol with nothing
-    replace :: [ByteString] -> ByteString
+    replace :: [Text] -> Text
     replace = L.unlines . map (\x ->
       let y = L.unpack x
           mkReg = mkRegex . (=~ r)
       in L.pack $ subRegex (mkReg y) y "")
 
     -- Make sure the result is in the right pairing order
-    ensurePair :: [[ByteString]] -> [[ByteString]]
+    ensurePair :: [[Text]] -> [[Text]]
     ensurePair ys | even (length ys) = ys
                   | otherwise = appendList [[""]]
       where appendList | (head . head) ys =~ r = (ys ++)
                        | otherwise             = (++ ys)
 
-parse :: Maybe (Map String ByteString)
-      -> ByteString
-      -> [Map String ByteString]
+parse :: Maybe (Map String ByteString) -> Text -> [Map String Text]
 parse Nothing _       = []
 parse (Just src) code = inSections line $ src M.! "comment"
   where line = filter ((/=) "#!" . L.take 2) $ L.lines code
@@ -141,7 +142,7 @@ parse (Just src) code = inSections line $ src M.! "comment"
 -- little marker comments between each section and then splitting the result
 -- string wherever our markers occur.
 highlight :: FilePath
-          -> [Map String ByteString]
+          -> [Map String Text]
           -> IO (String, Map String ByteString)
 highlight src section = do
   let language = fromJust $ getLanguage src
@@ -159,10 +160,10 @@ highlight src section = do
 -- After `highlight` is called, there are divider inside to show when the
 -- hightlighed stop and code begins. `mapSections` is used to take out the
 -- dividers and put them into `docsHtml` and `codeHtml` sections.
-mapSections :: [Map String ByteString]
+mapSections :: [Map String Text]
             -> String
             -> Map String ByteString
-            -> [Map String ByteString]
+            -> [Map String Text]
 mapSections section highlighted language =
   let output     = subRegex (mkRegex highlightReplace) highlighted ""
       divider    = mkRegex . L.unpack $ language M.! "dividerHtml"
@@ -207,7 +208,7 @@ sourceTemplate = map source
 --         $code-html$
 --       </td>
 --     </tr>
-sectionTemplate :: [Map String ByteString]
+sectionTemplate :: [Map String Text]
                 -> [Int]
                 -> [(String, String)]
 sectionTemplate section = map sections
@@ -231,7 +232,7 @@ sectionTemplate section = map sections
 -- Once all of the code is finished highlighting, we can generate the HTML
 -- file and write out the documentation. Pass the completed sections into
 -- the template found in `resources/hyakko.html`
-generateHTML :: FilePath -> [Map String ByteString] -> IO ()
+generateHTML :: FilePath -> [Map String Text] -> IO ()
 generateHTML src section = do
   let title = takeFileName src
       dest  = destination src
@@ -295,16 +296,16 @@ destination :: FilePath -> FilePath
 destination fp = "docs" </> (takeBaseName fp) ++ ".html"
 
 -- Create the template that we will use to generate the Hyakko HTML page.
-hyakkoTemplate :: [(String, String)] -> IO ByteString
+hyakkoTemplate :: [(String, String)] -> IO Text
 hyakkoTemplate var = readDataFile "resources/hyakko.html" >>=
   return . renderTemplate var . L.unpack
 
 -- The CSS styles we'd like to apply to the documentation.
-hyakkoStyles :: IO ByteString
+hyakkoStyles :: IO Text
 hyakkoStyles = readDataFile "resources/hyakko.css"
 
 -- The start and end of each Pygments highlight block.
-highlightStart, highlightEnd :: ByteString
+highlightStart, highlightEnd :: Text
 highlightStart   = "<div class=\"highlight\"><pre>"
 highlightEnd     = "</pre></div>"
 
@@ -312,7 +313,7 @@ highlightReplace :: String
 highlightReplace = L.unpack highlightStart ++ "|" ++ L.unpack highlightEnd
 
 -- Reads from resource path given in cabal package
-readDataFile :: FilePath -> IO ByteString
+readDataFile :: FilePath -> IO Text
 readDataFile = getDataFileName >=> L.readFile
 
 -- For each source file passed in as an argument, generate the

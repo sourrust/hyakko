@@ -5,11 +5,11 @@ import Text.Pandoc ( readMarkdown
                    , def
                    )
 
-import Data.ByteString.Lazy.Char8 (ByteString, pack)
+import Data.Text (Text, pack)
 
 -- Function for translating Markdown to HTML since `Pandoc` has several
 -- different generators for other markup languages.
-toHTML :: String -> ByteString
+toHTML :: String -> Text
 toHTML = pack . writeHTMLStr . parse
   where parse = readMarkdown def
         writeHTMLStr = writeHtmlString def
