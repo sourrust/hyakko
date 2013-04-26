@@ -94,23 +94,27 @@ inSections xs r = [M.fromList l | l <- clump sections]
     groupBy' t t1 = groupBy $ \x y ->
       and $ map (t1 . (=~ r)) [t x, t y]
     -- Replace the beggining comment symbol with nothing
+    replace :: [ByteString] -> ByteString
     replace = L.unlines . map (\x ->
       let y = L.unpack x
           mkReg = mkRegex . (=~ r)
       in L.pack $ subRegex (mkReg y) y "")
     -- Clump sectioned off lines into doc and code text.
+    clump :: [[ByteString]] -> [[(String, ByteString)]]
     clump [x] = clump $ ensurePair [x]
     clump (x:y:ys) = [ ("docsText", replace x)
                      , ("codeText", L.unlines y)
                      ] : clump ys
     clump _ = []
     -- Make sure the result is in the right pairing order
+    ensurePair :: [[ByteString]] -> [[ByteString]]
     ensurePair ys | even (length ys) = ys
                   | otherwise = appendList [[""]]
       where appendList | (head . head) ys =~ r = (ys ++)
                        | otherwise             = (++ ys)
     -- Bring the lists together into groups of comment and groups of code
     -- pattern.
+    sections :: [[ByteString]]
     sections = ensurePair . map concat
                           -- Group code into a list
                           . groupBy' head not
