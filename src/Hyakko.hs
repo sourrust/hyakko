@@ -69,7 +69,7 @@ import Paths_hyakko (getDataFileName)
 generateDocumentation :: [FilePath] -> IO ()
 generateDocumentation [] = return ()
 generateDocumentation (x:xs) = do
-  code <- L.readFile x
+  code <- T.readFile x
   let sections = parse (getLanguage x) code
   if null sections then
     putStrLn $ "hyakko doesn't support the language extension " ++ takeExtension x
@@ -106,32 +106,35 @@ inSections xs r = [M.fromList l | l <- clump sections]
     clump :: [[Text]] -> [[(String, Text)]]
     clump [x] = clump $ ensurePair [x]
     clump (x:y:ys) = [ ("docsText", replace x)
-                     , ("codeText", L.unlines y)
+                     , ("codeText", T.unlines y)
                      ] : clump ys
     clump _ = []
 
     -- Generalized function used to section off code and comments
     groupBy' t t1 = groupBy $ \x y ->
-      and $ map (t1 . (=~ r)) [t x, t y]
+      and $ map (t1 . (=~ r) . T.unpack) [t x, t y]
 
     -- Replace the beggining comment symbol with nothing
     replace :: [Text] -> Text
-    replace = L.unlines . map (\x ->
-      let y = L.unpack x
+    replace = T.unlines . map (\x ->
+      let y = T.unpack x
           mkReg = mkRegex . (=~ r)
-      in L.pack $ subRegex (mkReg y) y "")
+      in T.pack $ subRegex (mkReg y) y "")
 
     -- Make sure the result is in the right pairing order
     ensurePair :: [[Text]] -> [[Text]]
     ensurePair ys | even (length ys) = ys
                   | otherwise = appendList [[""]]
-      where appendList | (head . head) ys =~ r = (ys ++)
-                       | otherwise             = (++ ys)
+      where appendList | toBytes ys =~ r = (ys ++)
+                       | otherwise       = (++ ys)
+
+    toBytes :: [[Text]] -> ByteString
+    toBytes = L.pack . T.unpack . head . head
 
 parse :: Maybe (Map String ByteString) -> Text -> [Map String Text]
 parse Nothing _       = []
 parse (Just src) code = inSections line $ src M.! "comment"
-  where line = filter ((/=) "#!" . L.take 2) $ L.lines code
+  where line = filter ((/=) "#!" . T.take 2) $ T.lines code
 
 -- Highlights a single chunk of Haskell code, using **Pygments** over stdio,
 -- and runs the text of its corresponding comment through **Markdown**,
@@ -149,7 +152,7 @@ highlight src section = do
       options  = ["-l", L.unpack $ language M.! "name", "-f",
                   "html", "-O", "encoding=utf-8"]
       input = concatMap (\x ->
-        let codeText = L.unpack $ x M.! "codeText"
+        let codeText = T.unpack $ x M.! "codeText"
             divider  = L.unpack $ language M.! "dividerText"
         in codeText ++ divider) section
 
@@ -168,8 +171,8 @@ mapSections section highlighted language =
   let output     = subRegex (mkRegex highlightReplace) highlighted ""
       divider    = mkRegex . L.unpack $ language M.! "dividerHtml"
       fragments  = splitRegex divider output
-      packFrag   = L.pack . genericIndex fragments
-      docText s  = toHTML . L.unpack $ s M.! "docsText"
+      packFrag   = T.pack . genericIndex fragments
+      docText s  = toHTML . T.unpack $ s M.! "docsText"
       codeText i = highlightStart >< packFrag i >< highlightEnd
       sectLength = (length section) - 1
       intoMap x  = let sect = section !! x
@@ -223,9 +226,9 @@ sectionTemplate section = map sections
              , "<a class=\"pilcrow\" href=\"#section-"
              , show x'
              , "\">&#955;</a></div>"
-             , L.unpack $ sect M.! "docsHtml"
+             , T.unpack $ sect M.! "docsHtml"
              , "</td><td class=\"code\">"
-             , L.unpack $ sect M.! "codeHtml"
+             , T.unpack $ sect M.! "codeHtml"
              , "</td></tr>"
              ])
 
@@ -244,7 +247,7 @@ generateHTML src section = do
     , sectionTemplate section [0 .. (length section) - 1]
     ]
   putStrLn $ "hyakko: " ++ src ++ " -> " ++ dest
-  L.writeFile dest html
+  T.writeFile dest html
 
 -- ### Helpers & Setup
 
@@ -298,7 +301,7 @@ destination fp = "docs" </> (takeBaseName fp) ++ ".html"
 -- Create the template that we will use to generate the Hyakko HTML page.
 hyakkoTemplate :: [(String, String)] -> IO Text
 hyakkoTemplate var = readDataFile "resources/hyakko.html" >>=
-  return . renderTemplate var . L.unpack
+  return . T.pack . renderTemplate var . T.unpack
 
 -- The CSS styles we'd like to apply to the documentation.
 hyakkoStyles :: IO Text
@@ -310,11 +313,11 @@ highlightStart   = "<div class=\"highlight\"><pre>"
 highlightEnd     = "</pre></div>"
 
 highlightReplace :: String
-highlightReplace = L.unpack highlightStart ++ "|" ++ L.unpack highlightEnd
+highlightReplace = T.unpack highlightStart ++ "|" ++ T.unpack highlightEnd
 
 -- Reads from resource path given in cabal package
 readDataFile :: FilePath -> IO Text
-readDataFile = getDataFileName >=> L.readFile
+readDataFile = getDataFileName >=> T.readFile
 
 -- For each source file passed in as an argument, generate the
 -- documentation.
@@ -347,5 +350,5 @@ main = do
   style <- hyakkoStyles
   source <- sources
   createDirectoryIfMissing False "docs"
-  L.writeFile "docs/hyakko.css" style
+  T.writeFile "docs/hyakko.css" style
   generateDocumentation source
