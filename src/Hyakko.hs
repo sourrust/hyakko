@@ -91,14 +91,18 @@ inSections :: [ByteString] -> ByteString -> [Map String ByteString]
 inSections xs r = [M.fromList l | l <- clump sections]
   where
     -- Generalized function used to section off code and comments
-    groupBy' t t1 = groupBy $ \x y -> and $ map (t1 . (=~ r)) [t x, t y]
+    groupBy' t t1 = groupBy $ \x y ->
+      and $ map (t1 . (=~ r)) [t x, t y]
     -- Replace the beggining comment symbol with nothing
-    replace = L.unlines . map (\x -> let y = L.unpack x
-                                         mkReg = mkRegex . (=~ r)
-                                     in L.pack $ subRegex (mkReg y) y "")
+    replace = L.unlines . map (\x ->
+      let y = L.unpack x
+          mkReg = mkRegex . (=~ r)
+      in L.pack $ subRegex (mkReg y) y "")
     -- Clump sectioned off lines into doc and code text.
     clump [x] = clump $ ensurePair [x]
-    clump (x:y:ys) = [("docsText", replace x),("codeText", L.unlines y)] : clump ys
+    clump (x:y:ys) = [ ("docsText", replace x)
+                     , ("codeText", L.unlines y)
+                     ] : clump ys
     clump _ = []
     -- Make sure the result is in the right pairing order
     ensurePair ys | even (length ys) = ys
