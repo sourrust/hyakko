@@ -207,7 +207,7 @@ sourceTemplate = map source
 --     <tr id="section-$number$">
 --       <td class="docs">
 --         <div class="pilwrap">
---           <a class="pilcrow" href="#section-$number$">&#955;</a>
+--           <a class="pilcrow" href="#section-$number$">λ</a>
 --         </div>
 --         $doc-html$
 --       </td>
