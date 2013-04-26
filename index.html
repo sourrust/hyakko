@@ -131,9 +131,7 @@ cabal install hyakko</code></pre>
   </td>
   <td class='code'>
 <div class="highlight"><pre><span class="nf">inSections</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">ByteString</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">ByteString</span> <span class="ow">-&gt;</span> <span class="p">[</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">ByteString</span><span class="p">]</span>
-<span class="nf">inSections</span> <span class="n">xs</span> <span class="n">r</span> <span class="ow">=</span> <span class="kr">do</span>
-  <span class="n">l</span> <span class="ow">&lt;-</span> <span class="n">clump</span> <span class="n">s</span>
-  <span class="n">return</span> <span class="o">$</span> <span class="kt">M</span><span class="o">.</span><span class="n">fromList</span> <span class="n">l</span>
+<span class="nf">inSections</span> <span class="n">xs</span> <span class="n">r</span> <span class="ow">=</span> <span class="p">[</span><span class="kt">M</span><span class="o">.</span><span class="n">fromList</span> <span class="n">l</span> <span class="o">|</span> <span class="n">l</span> <span class="ow">&lt;-</span> <span class="n">clump</span> <span class="n">sections</span><span class="p">]</span>
   <span class="kr">where</span></pre></div>
   </td>
 </tr>
@@ -142,10 +140,11 @@ cabal install hyakko</code></pre>
     <div class='pilwrap'>
       <a class='pilcrow' href='#section-6'>&#955;</a>
     </div>
-<p>Generalized function used to section off code and comments</p>
+<p>Bring the lists together into groups of comment and groups of code pattern.</p>
   </td>
   <td class='code'>
-<div class="highlight"><pre>    <span class="n">groupBy&#39;</span> <span class="n">t</span> <span class="n">t1</span> <span class="ow">=</span> <span class="n">groupBy</span> <span class="o">$</span> <span class="nf">\</span><span class="n">x</span> <span class="n">y</span> <span class="ow">-&gt;</span> <span class="n">and</span> <span class="o">$</span> <span class="n">map</span> <span class="p">(</span><span class="n">t1</span> <span class="o">.</span> <span class="p">(</span><span class="o">=~</span> <span class="n">r</span><span class="p">))</span> <span class="p">[</span><span class="n">t</span> <span class="n">x</span><span class="p">,</span> <span class="n">t</span> <span class="n">y</span><span class="p">]</span></pre></div>
+<div class="highlight"><pre>    <span class="n">sections</span> <span class="ow">::</span> <span class="p">[[</span><span class="kt">ByteString</span><span class="p">]]</span>
+    <span class="n">sections</span> <span class="ow">=</span> <span class="n">ensurePair</span> <span class="o">.</span> <span class="n">map</span> <span class="n">concat</span></pre></div>
   </td>
 </tr>
 <tr id='section-7'>
@@ -153,12 +152,10 @@ cabal install hyakko</code></pre>
     <div class='pilwrap'>
       <a class='pilcrow' href='#section-7'>&#955;</a>
     </div>
-<p>Replace the beggining comment symbol with nothing</p>
+<p>Group code into a list</p>
   </td>
   <td class='code'>
-<div class="highlight"><pre>    <span class="n">replace</span> <span class="ow">=</span> <span class="kt">L</span><span class="o">.</span><span class="n">unlines</span> <span class="o">.</span> <span class="n">map</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="ow">-&gt;</span> <span class="kr">let</span> <span class="n">y</span> <span class="ow">=</span> <span class="kt">L</span><span class="o">.</span><span class="n">unpack</span> <span class="n">x</span>
-                                         <span class="n">mkReg</span> <span class="ow">=</span> <span class="n">mkRegex</span> <span class="o">.</span> <span class="p">(</span><span class="o">=~</span> <span class="n">r</span><span class="p">)</span>
-                                     <span class="kr">in</span> <span class="kt">L</span><span class="o">.</span><span class="n">pack</span> <span class="o">$</span> <span class="n">subRegex</span> <span class="p">(</span><span class="n">mkReg</span> <span class="n">y</span><span class="p">)</span> <span class="n">y</span> <span class="s">&quot;&quot;</span><span class="p">)</span></pre></div>
+<div class="highlight"><pre>                          <span class="o">.</span> <span class="n">groupBy&#39;</span> <span class="n">head</span> <span class="n">not</span></pre></div>
   </td>
 </tr>
 <tr id='section-8'>
@@ -166,12 +163,10 @@ cabal install hyakko</code></pre>
     <div class='pilwrap'>
       <a class='pilcrow' href='#section-8'>&#955;</a>
     </div>
-<p>Clump sectioned off lines into doc and code text.</p>
+<p>Group comments into a list</p>
   </td>
   <td class='code'>
-<div class="highlight"><pre>    <span class="n">clump</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="ow">=</span> <span class="n">clump</span> <span class="o">$</span> <span class="n">ensurePair</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span>
-    <span class="n">clump</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">y</span><span class="kt">:</span><span class="n">ys</span><span class="p">)</span> <span class="ow">=</span> <span class="p">[(</span><span class="s">&quot;docsText&quot;</span><span class="p">,</span> <span class="n">replace</span> <span class="n">x</span><span class="p">),(</span><span class="s">&quot;codeText&quot;</span><span class="p">,</span> <span class="kt">L</span><span class="o">.</span><span class="n">unlines</span> <span class="n">y</span><span class="p">)]</span> <span class="kt">:</span> <span class="n">clump</span> <span class="n">ys</span>
-    <span class="n">clump</span> <span class="kr">_</span> <span class="ow">=</span> <span class="kt">[]</span></pre></div>
+<div class="highlight"><pre>                          <span class="o">$</span> <span class="n">groupBy&#39;</span> <span class="n">id</span> <span class="n">id</span> <span class="n">xs</span></pre></div>
   </td>
 </tr>
 <tr id='section-9'>
@@ -179,13 +174,15 @@ cabal install hyakko</code></pre>
     <div class='pilwrap'>
       <a class='pilcrow' href='#section-9'>&#955;</a>
     </div>
-<p>Make sure the result is in the right pairing order</p>
+<p>Clump sectioned off lines into doc and code text.</p>
   </td>
   <td class='code'>
-<div class="highlight"><pre>    <span class="n">ensurePair</span> <span class="n">ys</span> <span class="o">|</span> <span class="n">even</span> <span class="p">(</span><span class="n">length</span> <span class="n">ys</span><span class="p">)</span> <span class="ow">=</span> <span class="n">ys</span>
-                  <span class="o">|</span> <span class="n">otherwise</span> <span class="ow">=</span> <span class="n">appendList</span> <span class="p">[[</span><span class="s">&quot;&quot;</span><span class="p">]]</span>
-      <span class="kr">where</span> <span class="n">appendList</span> <span class="o">|</span> <span class="p">(</span><span class="n">head</span> <span class="o">.</span> <span class="n">head</span><span class="p">)</span> <span class="n">ys</span> <span class="o">=~</span> <span class="n">r</span> <span class="ow">=</span> <span class="p">(</span><span class="n">ys</span> <span class="o">++</span><span class="p">)</span>
-                       <span class="o">|</span> <span class="n">otherwise</span>             <span class="ow">=</span> <span class="p">(</span><span class="o">++</span> <span class="n">ys</span><span class="p">)</span></pre></div>
+<div class="highlight"><pre>    <span class="n">clump</span> <span class="ow">::</span> <span class="p">[[</span><span class="kt">ByteString</span><span class="p">]]</span> <span class="ow">-&gt;</span> <span class="p">[[(</span><span class="kt">String</span><span class="p">,</span> <span class="kt">ByteString</span><span class="p">)]]</span>
+    <span class="n">clump</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="ow">=</span> <span class="n">clump</span> <span class="o">$</span> <span class="n">ensurePair</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span>
+    <span class="n">clump</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">y</span><span class="kt">:</span><span class="n">ys</span><span class="p">)</span> <span class="ow">=</span> <span class="p">[</span> <span class="p">(</span><span class="s">&quot;docsText&quot;</span><span class="p">,</span> <span class="n">replace</span> <span class="n">x</span><span class="p">)</span>
+                     <span class="p">,</span> <span class="p">(</span><span class="s">&quot;codeText&quot;</span><span class="p">,</span> <span class="kt">L</span><span class="o">.</span><span class="n">unlines</span> <span class="n">y</span><span class="p">)</span>
+                     <span class="p">]</span> <span class="kt">:</span> <span class="n">clump</span> <span class="n">ys</span>
+    <span class="n">clump</span> <span class="kr">_</span> <span class="ow">=</span> <span class="kt">[]</span></pre></div>
   </td>
 </tr>
 <tr id='section-10'>
@@ -193,10 +190,11 @@ cabal install hyakko</code></pre>
     <div class='pilwrap'>
       <a class='pilcrow' href='#section-10'>&#955;</a>
     </div>
-<p>Bring the lists together into groups of comment and groups of code pattern.</p>
+<p>Generalized function used to section off code and comments</p>
   </td>
   <td class='code'>
-<div class="highlight"><pre>    <span class="n">s</span> <span class="ow">=</span> <span class="n">ensurePair</span> <span class="o">.</span> <span class="n">map</span> <span class="n">concat</span></pre></div>
+<div class="highlight"><pre>    <span class="n">groupBy&#39;</span> <span class="n">t</span> <span class="n">t1</span> <span class="ow">=</span> <span class="n">groupBy</span> <span class="o">$</span> <span class="nf">\</span><span class="n">x</span> <span class="n">y</span> <span class="ow">-&gt;</span>
+      <span class="n">and</span> <span class="o">$</span> <span class="n">map</span> <span class="p">(</span><span class="n">t1</span> <span class="o">.</span> <span class="p">(</span><span class="o">=~</span> <span class="n">r</span><span class="p">))</span> <span class="p">[</span><span class="n">t</span> <span class="n">x</span><span class="p">,</span> <span class="n">t</span> <span class="n">y</span><span class="p">]</span></pre></div>
   </td>
 </tr>
 <tr id='section-11'>
@@ -204,10 +202,14 @@ cabal install hyakko</code></pre>
     <div class='pilwrap'>
       <a class='pilcrow' href='#section-11'>&#955;</a>
     </div>
-<p>Group code into a list</p>
+<p>Replace the beggining comment symbol with nothing</p>
   </td>
   <td class='code'>
-<div class="highlight"><pre>                   <span class="o">.</span> <span class="n">groupBy&#39;</span> <span class="n">head</span> <span class="n">not</span></pre></div>
+<div class="highlight"><pre>    <span class="n">replace</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">ByteString</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">ByteString</span>
+    <span class="n">replace</span> <span class="ow">=</span> <span class="kt">L</span><span class="o">.</span><span class="n">unlines</span> <span class="o">.</span> <span class="n">map</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="ow">-&gt;</span>
+      <span class="kr">let</span> <span class="n">y</span> <span class="ow">=</span> <span class="kt">L</span><span class="o">.</span><span class="n">unpack</span> <span class="n">x</span>
+          <span class="n">mkReg</span> <span class="ow">=</span> <span class="n">mkRegex</span> <span class="o">.</span> <span class="p">(</span><span class="o">=~</span> <span class="n">r</span><span class="p">)</span>
+      <span class="kr">in</span> <span class="kt">L</span><span class="o">.</span><span class="n">pack</span> <span class="o">$</span> <span class="n">subRegex</span> <span class="p">(</span><span class="n">mkReg</span> <span class="n">y</span><span class="p">)</span> <span class="n">y</span> <span class="s">&quot;&quot;</span><span class="p">)</span></pre></div>
   </td>
 </tr>
 <tr id='section-12'>
@@ -215,10 +217,14 @@ cabal install hyakko</code></pre>
     <div class='pilwrap'>
       <a class='pilcrow' href='#section-12'>&#955;</a>
     </div>
-<p>Group comments into a list</p>
+<p>Make sure the result is in the right pairing order</p>
   </td>
   <td class='code'>
-<div class="highlight"><pre>                   <span class="o">$</span> <span class="n">groupBy&#39;</span> <span class="n">id</span> <span class="n">id</span> <span class="n">xs</span>
+<div class="highlight"><pre>    <span class="n">ensurePair</span> <span class="ow">::</span> <span class="p">[[</span><span class="kt">ByteString</span><span class="p">]]</span> <span class="ow">-&gt;</span> <span class="p">[[</span><span class="kt">ByteString</span><span class="p">]]</span>
+    <span class="n">ensurePair</span> <span class="n">ys</span> <span class="o">|</span> <span class="n">even</span> <span class="p">(</span><span class="n">length</span> <span class="n">ys</span><span class="p">)</span> <span class="ow">=</span> <span class="n">ys</span>
+                  <span class="o">|</span> <span class="n">otherwise</span> <span class="ow">=</span> <span class="n">appendList</span> <span class="p">[[</span><span class="s">&quot;&quot;</span><span class="p">]]</span>
+      <span class="kr">where</span> <span class="n">appendList</span> <span class="o">|</span> <span class="p">(</span><span class="n">head</span> <span class="o">.</span> <span class="n">head</span><span class="p">)</span> <span class="n">ys</span> <span class="o">=~</span> <span class="n">r</span> <span class="ow">=</span> <span class="p">(</span><span class="n">ys</span> <span class="o">++</span><span class="p">)</span>
+                       <span class="o">|</span> <span class="n">otherwise</span>             <span class="ow">=</span> <span class="p">(</span><span class="o">++</span> <span class="n">ys</span><span class="p">)</span>
 
 <span class="nf">parse</span> <span class="ow">::</span> <span class="kt">Maybe</span> <span class="p">(</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">ByteString</span><span class="p">)</span>
       <span class="ow">-&gt;</span> <span class="kt">ByteString</span>
