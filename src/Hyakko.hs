@@ -59,9 +59,13 @@ import Paths_hyakko (getDataFileName)
 
 -- ### Main Documentation Generation Functions
 
-(><) :: ByteString -> ByteString -> ByteString
-(><) = L.append
-{-# INLINE (><) #-}
+(++.) :: Text -> Text -> Text
+(++.) = T.append
+{-# INLINE (++.) #-}
+
+(++*) :: ByteString -> ByteString -> ByteString
+(++*) = L.append
+{-# INLINE (++*) #-}
 
 -- Generate the documentation for a source file by reading it in, splitting
 -- it up into comment/code sections, highlighting them for the appropriate
@@ -173,7 +177,7 @@ mapSections section highlighted language =
       fragments  = splitRegex divider output
       packFrag   = T.pack . genericIndex fragments
       docText s  = toHTML . T.unpack $ s M.! "docsText"
-      codeText i = highlightStart >< packFrag i >< highlightEnd
+      codeText i = highlightStart ++. packFrag i ++. highlightEnd
       sectLength = (length section) - 1
       intoMap x  = let sect = section !! x
                    in M.insert "docsHtml" (docText sect) $
@@ -270,10 +274,10 @@ languages =
             ("name", "ruby"), hashSymbol])
           ]
       -- Does the line begin with a comment?
-      hasComments symbol = "^\\s*" >< symbol ><  "\\s?"
+      hasComments symbol = "^\\s*" ++* symbol ++*  "\\s?"
       -- The dividing token we feed into Pygments, to delimit the boundaries
       -- between sections.
-      tokenDivider symbol = "\n" >< symbol >< "DIVIDER\n"
+      tokenDivider symbol = "\n" ++* symbol ++* "DIVIDER\n"
       -- The mirror of `divider_text` that we expect Pygments to return. We
       -- can split on this to recover the original sections. **Note**: the
       -- class is "c" for Python and "c1" for the other languages
