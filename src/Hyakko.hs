@@ -88,9 +88,7 @@ generateDocumentation (x:xs) = do
 --     ]
 --
 inSections :: [ByteString] -> ByteString -> [Map String ByteString]
-inSections xs r = do
-  l <- clump s
-  return $ M.fromList l
+inSections xs r = [M.fromList l | l <- clump sections]
   where
     -- Generalized function used to section off code and comments
     groupBy' t t1 = groupBy $ \x y -> and $ map (t1 . (=~ r)) [t x, t y]
