@@ -107,11 +107,11 @@ inSections xs r = [M.fromList l | l <- clump sections]
                        | otherwise             = (++ ys)
     -- Bring the lists together into groups of comment and groups of code
     -- pattern.
-    s = ensurePair . map concat
-                   -- Group code into a list
-                   . groupBy' head not
-                   -- Group comments into a list
-                   $ groupBy' id id xs
+    sections = ensurePair . map concat
+                          -- Group code into a list
+                          . groupBy' head not
+                          -- Group comments into a list
+                          $ groupBy' id id xs
 
 parse :: Maybe (Map String ByteString)
       -> ByteString
