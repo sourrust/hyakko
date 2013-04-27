@@ -34,6 +34,9 @@ import Data.Map (Map)
 import qualified Data.Map as M
 import Data.ByteString.Lazy.Char8 (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as L
+import Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import Data.List (sort, groupBy, genericIndex)
 import Data.Maybe (fromJust)
 import Control.Monad (filterM, (>=>), forM)
@@ -56,9 +59,13 @@ import Paths_hyakko (getDataFileName)
 
 -- ### Main Documentation Generation Functions
 
-(><) :: ByteString -> ByteString -> ByteString
-(><) = L.append
-{-# INLINE (><) #-}
+(++.) :: Text -> Text -> Text
+(++.) = T.append
+{-# INLINE (++.) #-}
+
+(++*) :: ByteString -> ByteString -> ByteString
+(++*) = L.append
+{-# INLINE (++*) #-}
 
 -- Generate the documentation for a source file by reading it in, splitting
 -- it up into comment/code sections, highlighting them for the appropriate
@@ -66,7 +73,7 @@ import Paths_hyakko (getDataFileName)
 generateDocumentation :: [FilePath] -> IO ()
 generateDocumentation [] = return ()
 generateDocumentation (x:xs) = do
-  code <- L.readFile x
+  code <- T.readFile x
   let sections = parse (getLanguage x) code
   if null sections then
     putStrLn $ "hyakko doesn't support the language extension " ++ takeExtension x
@@ -87,12 +94,12 @@ generateDocumentation (x:xs) = do
 --       ("codeHtml", ...)
 --     ]
 --
-inSections :: [ByteString] -> ByteString -> [Map String ByteString]
+inSections :: [Text] -> ByteString -> [Map String Text]
 inSections xs r = [M.fromList l | l <- clump sections]
   where
     -- Bring the lists together into groups of comment and groups of code
     -- pattern.
-    sections :: [[ByteString]]
+    sections :: [[Text]]
     sections = ensurePair . map concat
                           -- Group code into a list
                           . groupBy' head not
@@ -100,37 +107,38 @@ inSections xs r = [M.fromList l | l <- clump sections]
                           $ groupBy' id id xs
 
     -- Clump sectioned off lines into doc and code text.
-    clump :: [[ByteString]] -> [[(String, ByteString)]]
+    clump :: [[Text]] -> [[(String, Text)]]
     clump [x] = clump $ ensurePair [x]
     clump (x:y:ys) = [ ("docsText", replace x)
-                     , ("codeText", L.unlines y)
+                     , ("codeText", T.unlines y)
                      ] : clump ys
     clump _ = []
 
     -- Generalized function used to section off code and comments
     groupBy' t t1 = groupBy $ \x y ->
-      and $ map (t1 . (=~ r)) [t x, t y]
+      and $ map (t1 . (=~ r) . T.unpack) [t x, t y]
 
     -- Replace the beggining comment symbol with nothing
-    replace :: [ByteString] -> ByteString
-    replace = L.unlines . map (\x ->
-      let y = L.unpack x
+    replace :: [Text] -> Text
+    replace = T.unlines . map (\x ->
+      let y = T.unpack x
           mkReg = mkRegex . (=~ r)
-      in L.pack $ subRegex (mkReg y) y "")
+      in T.pack $ subRegex (mkReg y) y "")
 
     -- Make sure the result is in the right pairing order
-    ensurePair :: [[ByteString]] -> [[ByteString]]
+    ensurePair :: [[Text]] -> [[Text]]
     ensurePair ys | even (length ys) = ys
                   | otherwise = appendList [[""]]
-      where appendList | (head . head) ys =~ r = (ys ++)
-                       | otherwise             = (++ ys)
+      where appendList | toBytes ys =~ r = (ys ++)
+                       | otherwise       = (++ ys)
 
-parse :: Maybe (Map String ByteString)
-      -> ByteString
-      -> [Map String ByteString]
+    toBytes :: [[Text]] -> ByteString
+    toBytes = L.pack . T.unpack . head . head
+
+parse :: Maybe (Map String ByteString) -> Text -> [Map String Text]
 parse Nothing _       = []
 parse (Just src) code = inSections line $ src M.! "comment"
-  where line = filter ((/=) "#!" . L.take 2) $ L.lines code
+  where line = filter ((/=) "#!" . T.take 2) $ T.lines code
 
 -- Highlights a single chunk of Haskell code, using **Pygments** over stdio,
 -- and runs the text of its corresponding comment through **Markdown**,
@@ -141,14 +149,14 @@ parse (Just src) code = inSections line $ src M.! "comment"
 -- little marker comments between each section and then splitting the result
 -- string wherever our markers occur.
 highlight :: FilePath
-          -> [Map String ByteString]
+          -> [Map String Text]
           -> IO (String, Map String ByteString)
 highlight src section = do
   let language = fromJust $ getLanguage src
       options  = ["-l", L.unpack $ language M.! "name", "-f",
                   "html", "-O", "encoding=utf-8"]
       input = concatMap (\x ->
-        let codeText = L.unpack $ x M.! "codeText"
+        let codeText = T.unpack $ x M.! "codeText"
             divider  = L.unpack $ language M.! "dividerText"
         in codeText ++ divider) section
 
@@ -159,17 +167,17 @@ highlight src section = do
 -- After `highlight` is called, there are divider inside to show when the
 -- hightlighed stop and code begins. `mapSections` is used to take out the
 -- dividers and put them into `docsHtml` and `codeHtml` sections.
-mapSections :: [Map String ByteString]
+mapSections :: [Map String Text]
             -> String
             -> Map String ByteString
-            -> [Map String ByteString]
+            -> [Map String Text]
 mapSections section highlighted language =
   let output     = subRegex (mkRegex highlightReplace) highlighted ""
       divider    = mkRegex . L.unpack $ language M.! "dividerHtml"
       fragments  = splitRegex divider output
-      packFrag   = L.pack . genericIndex fragments
-      docText s  = toHTML . L.unpack $ s M.! "docsText"
-      codeText i = highlightStart >< packFrag i >< highlightEnd
+      packFrag   = T.pack . genericIndex fragments
+      docText s  = toHTML . T.unpack $ s M.! "docsText"
+      codeText i = highlightStart ++. packFrag i ++. highlightEnd
       sectLength = (length section) - 1
       intoMap x  = let sect = section !! x
                    in M.insert "docsHtml" (docText sect) $
@@ -199,7 +207,7 @@ sourceTemplate = map source
 --     <tr id="section-$number$">
 --       <td class="docs">
 --         <div class="pilwrap">
---           <a class="pilcrow" href="#section-$number$">&#955;</a>
+--           <a class="pilcrow" href="#section-$number$">λ</a>
 --         </div>
 --         $doc-html$
 --       </td>
@@ -207,7 +215,7 @@ sourceTemplate = map source
 --         $code-html$
 --       </td>
 --     </tr>
-sectionTemplate :: [Map String ByteString]
+sectionTemplate :: [Map String Text]
                 -> [Int]
                 -> [(String, String)]
 sectionTemplate section = map sections
@@ -222,16 +230,16 @@ sectionTemplate section = map sections
              , "<a class=\"pilcrow\" href=\"#section-"
              , show x'
              , "\">&#955;</a></div>"
-             , L.unpack $ sect M.! "docsHtml"
+             , T.unpack $ sect M.! "docsHtml"
              , "</td><td class=\"code\">"
-             , L.unpack $ sect M.! "codeHtml"
+             , T.unpack $ sect M.! "codeHtml"
              , "</td></tr>"
              ])
 
 -- Once all of the code is finished highlighting, we can generate the HTML
 -- file and write out the documentation. Pass the completed sections into
 -- the template found in `resources/hyakko.html`
-generateHTML :: FilePath -> [Map String ByteString] -> IO ()
+generateHTML :: FilePath -> [Map String Text] -> IO ()
 generateHTML src section = do
   let title = takeFileName src
       dest  = destination src
@@ -243,7 +251,7 @@ generateHTML src section = do
     , sectionTemplate section [0 .. (length section) - 1]
     ]
   putStrLn $ "hyakko: " ++ src ++ " -> " ++ dest
-  L.writeFile dest html
+  T.writeFile dest html
 
 -- ### Helpers & Setup
 
@@ -266,10 +274,10 @@ languages =
             ("name", "ruby"), hashSymbol])
           ]
       -- Does the line begin with a comment?
-      hasComments symbol = "^\\s*" >< symbol ><  "\\s?"
+      hasComments symbol = "^\\s*" ++* symbol ++*  "\\s?"
       -- The dividing token we feed into Pygments, to delimit the boundaries
       -- between sections.
-      tokenDivider symbol = "\n" >< symbol >< "DIVIDER\n"
+      tokenDivider symbol = "\n" ++* symbol ++* "DIVIDER\n"
       -- The mirror of `divider_text` that we expect Pygments to return. We
       -- can split on this to recover the original sections. **Note**: the
       -- class is "c" for Python and "c1" for the other languages
@@ -295,25 +303,25 @@ destination :: FilePath -> FilePath
 destination fp = "docs" </> (takeBaseName fp) ++ ".html"
 
 -- Create the template that we will use to generate the Hyakko HTML page.
-hyakkoTemplate :: [(String, String)] -> IO ByteString
+hyakkoTemplate :: [(String, String)] -> IO Text
 hyakkoTemplate var = readDataFile "resources/hyakko.html" >>=
-  return . renderTemplate var . L.unpack
+  return . T.pack . renderTemplate var . T.unpack
 
 -- The CSS styles we'd like to apply to the documentation.
-hyakkoStyles :: IO ByteString
+hyakkoStyles :: IO Text
 hyakkoStyles = readDataFile "resources/hyakko.css"
 
 -- The start and end of each Pygments highlight block.
-highlightStart, highlightEnd :: ByteString
+highlightStart, highlightEnd :: Text
 highlightStart   = "<div class=\"highlight\"><pre>"
 highlightEnd     = "</pre></div>"
 
 highlightReplace :: String
-highlightReplace = L.unpack highlightStart ++ "|" ++ L.unpack highlightEnd
+highlightReplace = T.unpack highlightStart ++ "|" ++ T.unpack highlightEnd
 
 -- Reads from resource path given in cabal package
-readDataFile :: FilePath -> IO ByteString
-readDataFile = getDataFileName >=> L.readFile
+readDataFile :: FilePath -> IO Text
+readDataFile = getDataFileName >=> T.readFile
 
 -- For each source file passed in as an argument, generate the
 -- documentation.
@@ -346,5 +354,5 @@ main = do
   style <- hyakkoStyles
   source <- sources
   createDirectoryIfMissing False "docs"
-  L.writeFile "docs/hyakko.css" style
+  T.writeFile "docs/hyakko.css" style
   generateDocumentation source
