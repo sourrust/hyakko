@@ -4,7 +4,7 @@ cabal-version:    >= 1.6
 build-type:       Simple
 license:          MIT
 license-file:     LICENSE
-copyright:        (c) 2011 Jeremy Hull
+copyright:        (c) 2013 Jeremy Hull
 author:           Jeremy Hull <sourdrums@gmail.com>
 maintainer:       Jeremy Hull <sourdrums@gmail.com>
 bug-reports:      https://github.com/sourrust/hyakko/issues
@@ -13,9 +13,9 @@ homepage:         http://sourrust.github.com/hyakko/
 category:         Documentation
 tested-with:      GHC == 7.4.2
 synopsis:         Literate-style Documentation Generator
-description:      Hyakko is a Haskell port of Docco: the original quick-and-dirty,
-                  hundred-line-long, literate-programming-style documentation
-                  generator.
+description:      Hyakko is a Haskell port of Docco: the original
+                  quick-and-dirty, hundred-line-long,
+                  literate-programming-style documentation generator.
 data-files:
                   -- HTML template and CSS sytle
                   resources/hyakko.html
