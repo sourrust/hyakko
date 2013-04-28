@@ -9,7 +9,7 @@ author:           Jeremy Hull <sourdrums@gmail.com>
 maintainer:       Jeremy Hull <sourdrums@gmail.com>
 bug-reports:      https://github.com/sourrust/hyakko/issues
 stability:        alpha
-homepage:         http://sourrust.github.com/hyakko/
+homepage:         http://sourrust.github.io/hyakko/
 category:         Documentation
 tested-with:      GHC == 7.4.2
 synopsis:         Literate-style Documentation Generator
