@@ -37,8 +37,8 @@ import qualified Data.ByteString.Lazy.Char8 as L
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import Data.List (sort, groupBy, genericIndex)
-import Data.Maybe (fromJust)
+import Data.List (sort, groupBy)
+import Data.Maybe (fromJust, isNothing)
 import Control.Monad (filterM, (>=>), forM)
 import Text.Pandoc.Templates
 import Text.Regex
@@ -309,14 +309,6 @@ hyakkoTemplate var = readDataFile "resources/hyakko.html" >>=
 -- The CSS styles we'd like to apply to the documentation.
 hyakkoStyles :: IO Text
 hyakkoStyles = readDataFile "resources/hyakko.css"
-
--- The start and end of each Pygments highlight block.
-highlightStart, highlightEnd :: Text
-highlightStart   = "<div class=\"highlight\"><pre>"
-highlightEnd     = "</pre></div>"
-
-highlightReplace :: String
-highlightReplace = T.unpack highlightStart ++ "|" ++ T.unpack highlightEnd
 
 -- Reads from resource path given in cabal package
 readDataFile :: FilePath -> IO Text
