@@ -78,8 +78,8 @@ generateDocumentation (x:xs) = do
   if null sections then
     putStrLn $ "hyakko doesn't support the language extension " ++ takeExtension x
     else do
-      (output, language) <- highlight x sections
-      let y = mapSections sections output language
+      output <- highlight x sections
+      let y = mapSections sections output
       generateHTML x y
       generateDocumentation xs
 
@@ -167,36 +167,24 @@ parse (Just src) code = inSections line (src M.! "comment")
 -- We process the entire file in a single call to Pygments by inserting
 -- little marker comments between each section and then splitting the result
 -- string wherever our markers occur.
-highlight :: FilePath
-          -> [Map String Text]
-          -> IO (String, Map String ByteString)
+highlight :: FilePath -> [Map String Text] -> IO [String]
 highlight src section = do
   let language = fromJust $ getLanguage src
       options  = ["-l", L.unpack $ language M.! "name", "-f",
                   "html", "-O", "encoding=utf-8"]
-      input = concatMap (\x ->
-        let codeText = T.unpack $ x M.! "codeText"
-            divider  = L.unpack $ language M.! "dividerText"
-        in codeText ++ divider) section
+      input    = map (\x -> T.unpack $ x M.! "codeText") section
 
-  output <- readProcess "pygmentize" options input
+  output <- mapM (readProcess "pygmentize" options) input
 
-  return (output, language)
+  return output
 
 -- After `highlight` is called, there are divider inside to show when the
 -- hightlighed stop and code begins. `mapSections` is used to take out the
 -- dividers and put them into `docsHtml` and `codeHtml` sections.
-mapSections :: [Map String Text]
-            -> String
-            -> Map String ByteString
-            -> [Map String Text]
-mapSections section highlighted language =
-  let output     = subRegex (mkRegex highlightReplace) highlighted ""
-      divider    = mkRegex . L.unpack $ language M.! "dividerHtml"
-      fragments  = splitRegex divider output
-      packFrag   = T.pack . genericIndex fragments
-      docText s  = toHTML . T.unpack $ s M.! "docsText"
-      codeText i = highlightStart ++. packFrag i ++. highlightEnd
+mapSections :: [Map String Text] -> [String] -> [Map String Text]
+mapSections section highlighted =
+  let docText s  = toHTML . T.unpack $ s M.! "docsText"
+      codeText i = T.pack $ highlighted !! i
       sectLength = (length section) - 1
       intoMap x  = let sect = section !! x
                    in M.insert "docsHtml" (docText sect) $
@@ -297,20 +285,9 @@ languages =
           ]
       -- Does the line begin with a comment?
       hasComments symbol = "^\\s*" ++* symbol ++*  "\\s?"
-      -- The dividing token we feed into Pygments, to delimit the boundaries
-      -- between sections.
-      tokenDivider symbol = "\n" ++* symbol ++* "DIVIDER\n"
-      -- The mirror of `divider_text` that we expect Pygments to return. We
-      -- can split on this to recover the original sections. **Note**: the
-      -- class is "c" for Python and "c1" for the other languages
-      htmlDivider symbol = L.concat [ "\n*<span class=\"c1?\">"
-                                    , symbol
-                                    , "DIVIDER</span>"
-                                    ]
-      intoMap lang = let symbol = lang M.! "symbol"
-                  in M.insert "comment" (hasComments symbol)
-                   . M.insert "dividerText" (tokenDivider symbol)
-                   $ M.insert "dividerHtml" (htmlDivider symbol) lang
+      intoMap lang = M.insert "comment"
+                              (hasComments $ lang M.! "symbol")
+                              lang
 
   -- Build out the appropriate matchers and delimiters for each language.
   in M.map intoMap language
