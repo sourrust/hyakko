@@ -40,6 +40,9 @@ import qualified Data.Text.IO as T
 import Data.List (sort, groupBy)
 import Data.Maybe (fromJust, isNothing)
 import Control.Monad (filterM, (>=>), forM)
+import qualified Text.Blaze.Html as B
+import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
+import qualified Text.Highlighting.Kate as K
 import Text.Pandoc.Templates
 import Text.Regex
 import Text.Regex.PCRE ((=~))
