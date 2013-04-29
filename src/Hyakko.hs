@@ -81,8 +81,8 @@ generateDocumentation (x:xs) = do
   if null sections then
     putStrLn $ "hyakko doesn't support the language extension " ++ takeExtension x
     else do
-      output <- highlight x sections
-      let y = mapSections sections output
+      let output = highlight x sections
+          y      = mapSections sections output
       generateHTML x y
       generateDocumentation xs
 
@@ -170,24 +170,23 @@ parse (Just src) code = inSections line (src M.! "comment")
 -- We process the entire file in a single call to Pygments by inserting
 -- little marker comments between each section and then splitting the result
 -- string wherever our markers occur.
-highlight :: FilePath -> [Map String Text] -> IO [String]
-highlight src section = do
+highlight :: FilePath -> [Map String Text] -> [Text]
+highlight src section =
   let language = fromJust $ getLanguage src
-      options  = ["-l", L.unpack $ language M.! "name", "-f",
-                  "html", "-O", "encoding=utf-8"]
+      langName = L.unpack $ language M.! "name"
       input    = map (\x -> T.unpack $ x M.! "codeText") section
-
-  output <- mapM (readProcess "pygmentize" options) input
-
-  return output
+      html     = B.toHtml . K.formatHtmlBlock K.defaultFormatOpts
+                          . K.highlightAs langName
+      htmlText = T.pack . L.unpack . renderHtml . html
+  in map htmlText input
 
 -- After `highlight` is called, there are divider inside to show when the
 -- hightlighed stop and code begins. `mapSections` is used to take out the
 -- dividers and put them into `docsHtml` and `codeHtml` sections.
-mapSections :: [Map String Text] -> [String] -> [Map String Text]
+mapSections :: [Map String Text] -> [Text] -> [Map String Text]
 mapSections section highlighted =
   let docText s  = toHTML . T.unpack $ s M.! "docsText"
-      codeText i = T.pack $ highlighted !! i
+      codeText i = highlighted !! i
       sectLength = (length section) - 1
       intoMap x  = let sect = section !! x
                    in M.insert "docsHtml" (docText sect) $
