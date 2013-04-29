@@ -264,6 +264,9 @@ languages =
       language   = M.fromList [
           (".hs", M.fromList [
             ("name", "haskell"), ("symbol", "--")]),
+          (".lhs", M.fromList [
+            ("name", "haskell"), ("symbol", "> "),
+            ("literate", "True")]),
           (".coffee", M.fromList [
             ("name", "coffee-script"), hashSymbol]),
           (".js", M.fromList [
