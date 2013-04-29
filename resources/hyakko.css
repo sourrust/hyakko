@@ -164,12 +164,12 @@ body .nt { color: #954121; font-weight: bold }  /* Name.Tag */
 body .nv { color: #19469D }                     /* Name.Variable */
 body .ow { color: #AA22FF; font-weight: bold }  /* Operator.Word */
 body .w { color: #bbbbbb }                      /* Text.Whitespace */
-body .mf { color: #666666 }                     /* Literal.Number.Float */
+body .fl { color: #666666 }                     /* Literal.Number.Float */
 body .mh { color: #666666 }                     /* Literal.Number.Hex */
-body .mi { color: #666666 }                     /* Literal.Number.Integer */
+body .dv { color: #666666 }                     /* Literal.Number.Integer */
 body .mo { color: #666666 }                     /* Literal.Number.Oct */
 body .sb { color: #219161 }                     /* Literal.String.Backtick */
-body .sc { color: #219161 }                     /* Literal.String.Char */
+body .ch { color: #219161 }                     /* Literal.String.Char */
 body .sd { color: #219161; font-style: italic } /* Literal.String.Doc */
 body .s2 { color: #219161 }                     /* Literal.String.Double */
 body .se { color: #BB6622; font-weight: bold }  /* Literal.String.Escape */
