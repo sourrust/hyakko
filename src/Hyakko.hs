@@ -57,7 +57,6 @@ import System.FilePath ( takeBaseName
                        , takeFileName
                        , (</>)
                        )
-import System.Process (readProcess)
 import Paths_hyakko (getDataFileName)
 
 -- ### Main Documentation Generation Functions

@@ -33,7 +33,6 @@ Flag threaded
 Executable hyakko
   build-depends:  base >= 4 && < 5,
                   ghc >= 7,
-                  process >= 1,
                   filepath >= 1.2,
                   regex-compat >= 0.9,
                   regex-pcre >= 0.9,
