@@ -94,8 +94,13 @@ generateDocumentation (x:xs) = do
 --       ("codeHtml", ...)
 --     ]
 --
-inSections :: [Text] -> ByteString -> [Map String Text]
-inSections xs r = [M.fromList l | l <- clump sections]
+inSections :: [Text]
+           -> ByteString
+           -> Maybe ByteString
+           -> [Map String Text]
+inSections xs r literate =
+  let clumpFn = if isNothing literate then clump else clumpLiterate
+  in [M.fromList l | l <- clumpFn sections]
   where
     -- Bring the lists together into groups of comment and groups of code
     -- pattern.
@@ -107,12 +112,19 @@ inSections xs r = [M.fromList l | l <- clump sections]
                           $ groupBy' id id xs
 
     -- Clump sectioned off lines into doc and code text.
-    clump :: [[Text]] -> [[(String, Text)]]
+    clump, clumpLiterate :: [[Text]] -> [[(String, Text)]]
     clump [x] = clump $ ensurePair [x]
     clump (x:y:ys) = [ ("docsText", replace x)
                      , ("codeText", T.unlines y)
                      ] : clump ys
     clump _ = []
+
+    -- Same as `clump` only reverse "docText" and "codeText"
+    clumpLiterate [x] = clumpLiterate $ ensurePair' [x]
+    clumpLiterate (x:y:ys) = [ ("docsText", T.unlines y)
+                             , ("codeText", replace x)
+                             ] : clumpLiterate ys
+    clumpLiterate _ = []
 
     -- Generalized function used to section off code and comments
     groupBy' t t1 = groupBy $ \x y ->
@@ -132,12 +144,19 @@ inSections xs r = [M.fromList l | l <- clump sections]
       where appendList | toBytes ys =~ r = (ys ++)
                        | otherwise       = (++ ys)
 
+    ensurePair' :: [[Text]] -> [[Text]]
+    ensurePair' ys | even (length ys) = ys
+                  | otherwise = appendList [[""]]
+      where appendList | toBytes ys =~ r = (++ ys)
+                       | otherwise       = (ys ++)
+
     toBytes :: [[Text]] -> ByteString
     toBytes = L.pack . T.unpack . head . head
 
 parse :: Maybe (Map String ByteString) -> Text -> [Map String Text]
 parse Nothing _       = []
-parse (Just src) code = inSections line $ src M.! "comment"
+parse (Just src) code = inSections line (src M.! "comment")
+                          $ M.lookup "literate" src
   where line = filter ((/=) "#!" . T.take 2) $ T.lines code
 
 -- Highlights a single chunk of Haskell code, using **Pygments** over stdio,
