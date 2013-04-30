@@ -38,14 +38,13 @@ To install Hyakko
 > import Data.Text (Text)
 > import qualified Data.Text as T
 > import qualified Data.Text.IO as T
-> import Data.List (sort, groupBy)
-> import Data.Maybe (fromJust, isNothing)
+> import Data.List (sort)
+> import Data.Maybe (fromJust)
 > import Control.Monad (filterM, (>=>), forM)
 > import qualified Text.Blaze.Html as B
 > import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
 > import qualified Text.Highlighting.Kate as K
 > import Text.Pandoc.Templates
-> import Text.Regex
 > import Text.Regex.PCRE ((=~))
 > import System.Directory ( getDirectoryContents
 >                         , doesDirectoryExist
@@ -60,7 +59,8 @@ To install Hyakko
 >                        )
 > import Paths_hyakko (getDataFileName)
 
-### Main Documentation Generation Functions
+Main Documentation Generation Functions
+---------------------------------------
 
 > (++.) :: Text -> Text -> Text
 > (++.) = T.append
@@ -264,7 +264,8 @@ template found in `resources/hyakko.html`
 >   putStrLn $ "hyakko: " ++ src ++ " -> " ++ dest
 >   T.writeFile dest html
 
-### Helpers & Setup
+Helpers & Setup
+---------------
 
 A list of the languages that Hyakko supports, mapping the file extension to
 the name of the Pygments lexer and the symbol that indicates a comment. To
