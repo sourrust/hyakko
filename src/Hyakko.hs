@@ -130,9 +130,31 @@ replace reg x y =
 
 parse :: Maybe (Map String ByteString) -> Text -> [Map String Text]
 parse Nothing _       = []
-parse (Just src) code = inSections line (src M.! "comment")
-                          $ M.lookup "literate" src
-  where line = filter ((/=) "#!" . T.take 2) $ T.lines code
+parse (Just src) code =
+  inSections (newlines line (M.lookup "literate" src) True)
+             (src M.! "comment")
+  where line :: [Text]
+        line = filter ((/=) "#!" . T.take 2) $ T.lines code
+
+        newlines :: [Text] -> Maybe ByteString -> Bool -> [Text]
+        newlines [] _ _            = []
+        newlines xs Nothing _      = xs
+        newlines (x:xs) lit isText =
+          let s       = src M.! "symbol"
+              r       = "^" ++* (src M.! "symbol2") ++* "\\s?"
+              r1      = L.pack "^\\s*$"
+              (x', y) = if T.unpack x =~ r then
+                     (replace r x "", False)
+                     else
+                       insert (T.unpack x =~ r1) isText
+                         ((T.pack $ L.unpack s)  ++. " " ++. x)
+          in x': newlines xs lit y
+
+          where insert :: Bool -> Bool -> Text -> (Text, Bool)
+                insert True True _  = (T.pack . L.unpack
+                                        $ src M.! "symbol", True)
+                insert True False _ = ("", False)
+                insert False _ y    = (y, True)
 
 -- Highlights a single chunk of Haskell code, using **Pygments** over stdio,
 -- and runs the text of its corresponding comment through **Markdown**,
