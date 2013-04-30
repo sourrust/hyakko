@@ -2,19 +2,28 @@
 
 <html>
 <head>
-  <title>Hyakko.hs</title>
+  <title>Hyakko.lhs</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <link rel="stylesheet" media="all" href="hyakko.css" />
 </head>
 <body>
   <div id="container">
     <div id="background"></div>
+          <div id="jump_to">
+        Jump To &hellip;
+        <div id="jump_wrapper">
+          <div id="jump_page">
+<a class="source" href="Hyakko.html">Hyakko.lhs</a>
+<a class="source" href="Markdown.html">Markdown.hs</a>
+          </div>
+        </div>
+      </div>
         <table cellpadding="0" cellspacing="0">
       <thead>
         <tr>
           <th class="docs">
             <h1>
-              Hyakko.hs
+              Hyakko.lhs
             </h1>
           </th>
           <th class="code">
@@ -22,8 +31,7 @@
         </tr>
       </thead>
       <tbody>
-<tr id="section-1"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-1">&#955;</a></div></td><td class="code"><div class="highlight"><pre><span class="cm">{-# LANGUAGE OverloadedStrings #-}</span></pre></div></td></tr>
-<tr id="section-2"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-2">&#955;</a></div><p><strong>Hyakko</strong> is a Haskell port of <a href="http://jashkenas.github.com/docco/">docco</a>: the original quick-and-dirty, hundred-line-line, literate-programming-style documentation generator. It produces HTML that displays your comments alongside your code. Comments are passed through <a href="http://daringfireball.net/projects/markdown/syntax">Markdown</a> and code is passed through <a href="http://pygments.org/">Pygments</a> syntax highlighting. This page is the result of running Hyakko against its own source file.</p>
+<tr id="section-1"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-1">&#955;</a></div><p><strong>Hyakko</strong> is a Haskell port of <a href="http://jashkenas.github.com/docco/">docco</a>: the original quick-and-dirty, hundred-line-line, literate-programming-style documentation generator. It produces HTML that displays your comments alongside your code. Comments are passed through <a href="http://daringfireball.net/projects/markdown/syntax">Markdown</a> and code is passed through <a href="http://pygments.org/">Pygments</a> syntax highlighting. This page is the result of running Hyakko against its own source file.</p>
 <p>If you install Hyakko, you can run it from the command-line:</p>
 <pre><code>hyakko src/*.hs</code></pre>
 <p>...will generate linked HTML documentation for the named source files, saving it into a <code>docs</code> folder. The <a href="https://github.com/sourrust/hyakko">source for Hyakko</a> available on GitHub.</p>
@@ -33,156 +41,165 @@ cd hyakko
 cabal install</code></pre>
 <p>or</p>
 <pre><code>cabal update
-cabal install hyakko</code></pre></td><td class="code"><div class="highlight"><pre>
-<span class="kr">module</span> <span class="nn">Main</span> <span class="kr">where</span>
+cabal install hyakko</code></pre></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">{-# LANGUAGE OverloadedStrings #-}</span>
 
-<span class="kr">import</span> <span class="nn">Text.Markdown</span>
+<span class="kw">module</span> <span class="dt">Main</span> <span class="kw">where</span>
 
-<span class="kr">import</span> <span class="nn">Data.Map</span> <span class="p">(</span><span class="kt">Map</span><span class="p">)</span>
-<span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Data.Map</span> <span class="k">as</span> <span class="n">M</span>
-<span class="kr">import</span> <span class="nn">Data.ByteString.Lazy.Char8</span> <span class="p">(</span><span class="kt">ByteString</span><span class="p">)</span>
-<span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Data.ByteString.Lazy.Char8</span> <span class="k">as</span> <span class="n">L</span>
-<span class="kr">import</span> <span class="nn">Data.Text</span> <span class="p">(</span><span class="kt">Text</span><span class="p">)</span>
-<span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Data.Text</span> <span class="k">as</span> <span class="n">T</span>
-<span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Data.Text.IO</span> <span class="k">as</span> <span class="n">T</span>
-<span class="kr">import</span> <span class="nn">Data.List</span> <span class="p">(</span><span class="nf">sort</span><span class="p">,</span> <span class="nf">groupBy</span><span class="p">,</span> <span class="nf">genericIndex</span><span class="p">)</span>
-<span class="kr">import</span> <span class="nn">Data.Maybe</span> <span class="p">(</span><span class="nf">fromJust</span><span class="p">)</span>
-<span class="kr">import</span> <span class="nn">Control.Monad</span> <span class="p">(</span><span class="nf">filterM</span><span class="p">,</span> <span class="p">(</span><span class="o">&gt;=&gt;</span><span class="p">),</span> <span class="nf">forM</span><span class="p">)</span>
-<span class="kr">import</span> <span class="nn">Text.Pandoc.Templates</span>
-<span class="kr">import</span> <span class="nn">Text.Regex</span>
-<span class="kr">import</span> <span class="nn">Text.Regex.PCRE</span> <span class="p">((</span><span class="o">=~</span><span class="p">))</span>
-<span class="kr">import</span> <span class="nn">System.Directory</span> <span class="p">(</span> <span class="nf">getDirectoryContents</span>
-                        <span class="p">,</span> <span class="nf">doesDirectoryExist</span>
-                        <span class="p">,</span> <span class="nf">doesFileExist</span>
-                        <span class="p">,</span> <span class="nf">createDirectoryIfMissing</span>
-                        <span class="p">)</span>
-<span class="kr">import</span> <span class="nn">System.Environment</span> <span class="p">(</span><span class="nf">getArgs</span><span class="p">)</span>
-<span class="kr">import</span> <span class="nn">System.FilePath</span> <span class="p">(</span> <span class="nf">takeBaseName</span>
-                       <span class="p">,</span> <span class="nf">takeExtension</span>
-                       <span class="p">,</span> <span class="nf">takeFileName</span>
-                       <span class="p">,</span> <span class="p">(</span><span class="o">&lt;/&gt;</span><span class="p">)</span>
-                       <span class="p">)</span>
-<span class="kr">import</span> <span class="nn">System.Process</span> <span class="p">(</span><span class="nf">readProcess</span><span class="p">)</span>
-<span class="kr">import</span> <span class="nn">Paths_hyakko</span> <span class="p">(</span><span class="nf">getDataFileName</span><span class="p">)</span></pre></div></td></tr>
-<tr id="section-3"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-3">&#955;</a></div><h3 id="main-documentation-generation-functions">Main Documentation Generation Functions</h3></td><td class="code"><div class="highlight"><pre>
+<span class="kw">import</span> <span class="dt">Text.Markdown</span>
 
-<span class="p">(</span><span class="o">++.</span><span class="p">)</span> <span class="ow">::</span> <span class="kt">Text</span> <span class="ow">-&gt;</span> <span class="kt">Text</span> <span class="ow">-&gt;</span> <span class="kt">Text</span>
-<span class="p">(</span><span class="o">++.</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">append</span>
-<span class="cm">{-# INLINE (++.) #-}</span>
+<span class="kw">import</span> <span class="dt">Data.Map</span> (<span class="dt">Map</span>)
+<span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Data.Map</span> <span class="kw">as</span> <span class="dt">M</span>
+<span class="kw">import</span> <span class="dt">Data.ByteString.Lazy.Char8</span> (<span class="dt">ByteString</span>)
+<span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Data.ByteString.Lazy.Char8</span> <span class="kw">as</span> <span class="dt">L</span>
+<span class="kw">import</span> <span class="dt">Data.Text</span> (<span class="dt">Text</span>)
+<span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Data.Text</span> <span class="kw">as</span> <span class="dt">T</span>
+<span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Data.Text.IO</span> <span class="kw">as</span> <span class="dt">T</span>
+<span class="kw">import</span> <span class="dt">Data.List</span> (<span class="fu">sort</span>)
+<span class="kw">import</span> <span class="dt">Data.Maybe</span> (fromJust)
+<span class="kw">import</span> <span class="dt">Control.Monad</span> (filterM, (<span class="fu">&gt;=&gt;</span>), forM)
+<span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Text.Blaze.Html</span> <span class="kw">as</span> <span class="dt">B</span>
+<span class="kw">import</span> <span class="dt">Text.Blaze.Html.Renderer.Utf8</span> (renderHtml)
+<span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Text.Highlighting.Kate</span> <span class="kw">as</span> <span class="dt">K</span>
+<span class="kw">import</span> <span class="dt">Text.Pandoc.Templates</span>
+<span class="kw">import</span> <span class="dt">Text.Regex.PCRE</span> ((<span class="fu">=~</span>))
+<span class="kw">import</span> <span class="dt">System.Directory</span> ( getDirectoryContents
+                        , doesDirectoryExist
+                        , doesFileExist
+                        , createDirectoryIfMissing
+                        )
+<span class="kw">import</span> <span class="dt">System.Environment</span> (getArgs)
+<span class="kw">import</span> <span class="dt">System.FilePath</span> ( takeBaseName
+                       , takeExtension
+                       , takeFileName
+                       , (<span class="fu">&lt;/&gt;</span>)
+                       )
+<span class="kw">import</span> <span class="dt">Paths_hyakko</span> (getDataFileName)
+</code></pre></td></tr>
+<tr id="section-2"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-2">&#955;</a></div><h2 id="main-documentation-generation-functions">Main Documentation Generation Functions</h2></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">(++.) ::</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span>
+(<span class="fu">++.</span>) <span class="fu">=</span> T.append
+<span class="ot">{-# INLINE (++.) #-}</span>
 
-<span class="p">(</span><span class="o">++*</span><span class="p">)</span> <span class="ow">::</span> <span class="kt">ByteString</span> <span class="ow">-&gt;</span> <span class="kt">ByteString</span> <span class="ow">-&gt;</span> <span class="kt">ByteString</span>
-<span class="p">(</span><span class="o">++*</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">L</span><span class="o">.</span><span class="n">append</span>
-<span class="cm">{-# INLINE (++*) #-}</span></pre></div></td></tr>
-<tr id="section-4"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-4">&#955;</a></div><p>Generate the documentation for a source file by reading it in, splitting it up into comment/code sections, highlighting them for the appropriate language, and merging them into an HTML template.</p></td><td class="code"><div class="highlight"><pre>
-<span class="nf">generateDocumentation</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">FilePath</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
-<span class="nf">generateDocumentation</span> <span class="kt">[]</span> <span class="ow">=</span> <span class="n">return</span> <span class="nb">()</span>
-<span class="nf">generateDocumentation</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">xs</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
-  <span class="n">code</span> <span class="ow">&lt;-</span> <span class="kt">T</span><span class="o">.</span><span class="n">readFile</span> <span class="n">x</span>
-  <span class="kr">let</span> <span class="n">sections</span> <span class="ow">=</span> <span class="n">parse</span> <span class="p">(</span><span class="n">getLanguage</span> <span class="n">x</span><span class="p">)</span> <span class="n">code</span>
-  <span class="kr">if</span> <span class="n">null</span> <span class="n">sections</span> <span class="kr">then</span>
-    <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">&quot;hyakko doesn&#39;t support the language extension &quot;</span> <span class="o">++</span> <span class="n">takeExtension</span> <span class="n">x</span>
-    <span class="kr">else</span> <span class="kr">do</span>
-      <span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">language</span><span class="p">)</span> <span class="ow">&lt;-</span> <span class="n">highlight</span> <span class="n">x</span> <span class="n">sections</span>
-      <span class="kr">let</span> <span class="n">y</span> <span class="ow">=</span> <span class="n">mapSections</span> <span class="n">sections</span> <span class="n">output</span> <span class="n">language</span>
-      <span class="n">generateHTML</span> <span class="n">x</span> <span class="n">y</span>
-      <span class="n">generateDocumentation</span> <span class="n">xs</span></pre></div></td></tr>
-<tr id="section-5"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-5">&#955;</a></div><p>Given a string of source code, parse out each comment and the code that follows it, and create an individual <strong>section</strong> for it. Sections take the form:</p>
+<span class="ot">(++*) ::</span> <span class="dt">ByteString</span> <span class="ot">-&gt;</span> <span class="dt">ByteString</span> <span class="ot">-&gt;</span> <span class="dt">ByteString</span>
+(<span class="fu">++*</span>) <span class="fu">=</span> L.append
+<span class="ot">{-# INLINE (++*) #-}</span>
+</code></pre></td></tr>
+<tr id="section-3"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-3">&#955;</a></div><p>Generate the documentation for a source file by reading it in, splitting it up into comment/code sections, highlighting them for the appropriate language, and merging them into an HTML template.</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">generateDocumentation ::</span> [<span class="fu">FilePath</span>] <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
+generateDocumentation [] <span class="fu">=</span> <span class="fu">return</span> ()
+generateDocumentation (x<span class="fu">:</span>xs) <span class="fu">=</span> <span class="kw">do</span>
+  code <span class="ot">&lt;-</span> T.readFile x
+  <span class="kw">let</span> sections <span class="fu">=</span> parse (getLanguage x) code
+  <span class="kw">if</span> <span class="fu">null</span> sections <span class="kw">then</span>
+    <span class="fu">putStrLn</span> <span class="fu">$</span> <span class="st">&quot;hyakko doesn&#39;t support the language extension &quot;</span>
+             <span class="fu">++</span> takeExtension x
+    <span class="kw">else</span> <span class="kw">do</span>
+      <span class="kw">let</span> output <span class="fu">=</span> highlight x sections
+          y      <span class="fu">=</span> mapSections sections output
+      generateHTML x y
+      generateDocumentation xs
+</code></pre></td></tr>
+<tr id="section-4"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-4">&#955;</a></div><p>Given a string of source code, parse out each comment and the code that follows it, and create an individual <strong>section</strong> for it. Sections take the form:</p>
 <pre><code>[
   (&quot;docsText&quot;, ...),
   (&quot;docsHtml&quot;, ...),
   (&quot;codeText&quot;, ...),
   (&quot;codeHtml&quot;, ...)
-]</code></pre></td><td class="code"><div class="highlight"><pre>
-<span class="nf">inSections</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">Text</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">ByteString</span> <span class="ow">-&gt;</span> <span class="p">[</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">Text</span><span class="p">]</span>
-<span class="nf">inSections</span> <span class="n">xs</span> <span class="n">r</span> <span class="ow">=</span> <span class="p">[</span><span class="kt">M</span><span class="o">.</span><span class="n">fromList</span> <span class="n">l</span> <span class="o">|</span> <span class="n">l</span> <span class="ow">&lt;-</span> <span class="n">clump</span> <span class="n">sections</span><span class="p">]</span>
-  <span class="kr">where</span></pre></div></td></tr>
-<tr id="section-6"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-6">&#955;</a></div><p>Bring the lists together into groups of comment and groups of code pattern.</p></td><td class="code"><div class="highlight"><pre>
-    <span class="n">sections</span> <span class="ow">::</span> <span class="p">[[</span><span class="kt">Text</span><span class="p">]]</span>
-    <span class="n">sections</span> <span class="ow">=</span> <span class="n">ensurePair</span> <span class="o">.</span> <span class="n">map</span> <span class="n">concat</span></pre></div></td></tr>
-<tr id="section-7"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-7">&#955;</a></div><p>Group code into a list</p></td><td class="code"><div class="highlight"><pre>
-                          <span class="o">.</span> <span class="n">groupBy&#39;</span> <span class="n">head</span> <span class="n">not</span></pre></div></td></tr>
-<tr id="section-8"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-8">&#955;</a></div><p>Group comments into a list</p></td><td class="code"><div class="highlight"><pre>
-                          <span class="o">$</span> <span class="n">groupBy&#39;</span> <span class="n">id</span> <span class="n">id</span> <span class="n">xs</span></pre></div></td></tr>
-<tr id="section-9"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-9">&#955;</a></div><p>Clump sectioned off lines into doc and code text.</p></td><td class="code"><div class="highlight"><pre>
-    <span class="n">clump</span> <span class="ow">::</span> <span class="p">[[</span><span class="kt">Text</span><span class="p">]]</span> <span class="ow">-&gt;</span> <span class="p">[[(</span><span class="kt">String</span><span class="p">,</span> <span class="kt">Text</span><span class="p">)]]</span>
-    <span class="n">clump</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="ow">=</span> <span class="n">clump</span> <span class="o">$</span> <span class="n">ensurePair</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span>
-    <span class="n">clump</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">y</span><span class="kt">:</span><span class="n">ys</span><span class="p">)</span> <span class="ow">=</span> <span class="p">[</span> <span class="p">(</span><span class="s">&quot;docsText&quot;</span><span class="p">,</span> <span class="n">replace</span> <span class="n">x</span><span class="p">)</span>
-                     <span class="p">,</span> <span class="p">(</span><span class="s">&quot;codeText&quot;</span><span class="p">,</span> <span class="kt">T</span><span class="o">.</span><span class="n">unlines</span> <span class="n">y</span><span class="p">)</span>
-                     <span class="p">]</span> <span class="kt">:</span> <span class="n">clump</span> <span class="n">ys</span>
-    <span class="n">clump</span> <span class="kr">_</span> <span class="ow">=</span> <span class="kt">[]</span></pre></div></td></tr>
-<tr id="section-10"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-10">&#955;</a></div><p>Generalized function used to section off code and comments</p></td><td class="code"><div class="highlight"><pre>
-    <span class="n">groupBy&#39;</span> <span class="n">t</span> <span class="n">t1</span> <span class="ow">=</span> <span class="n">groupBy</span> <span class="o">$</span> <span class="nf">\</span><span class="n">x</span> <span class="n">y</span> <span class="ow">-&gt;</span>
-      <span class="n">and</span> <span class="o">$</span> <span class="n">map</span> <span class="p">(</span><span class="n">t1</span> <span class="o">.</span> <span class="p">(</span><span class="o">=~</span> <span class="n">r</span><span class="p">)</span> <span class="o">.</span> <span class="kt">T</span><span class="o">.</span><span class="n">unpack</span><span class="p">)</span> <span class="p">[</span><span class="n">t</span> <span class="n">x</span><span class="p">,</span> <span class="n">t</span> <span class="n">y</span><span class="p">]</span></pre></div></td></tr>
-<tr id="section-11"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-11">&#955;</a></div><p>Replace the beggining comment symbol with nothing</p></td><td class="code"><div class="highlight"><pre>
-    <span class="n">replace</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">Text</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">Text</span>
-    <span class="n">replace</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">unlines</span> <span class="o">.</span> <span class="n">map</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="ow">-&gt;</span>
-      <span class="kr">let</span> <span class="n">y</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">unpack</span> <span class="n">x</span>
-          <span class="n">mkReg</span> <span class="ow">=</span> <span class="n">mkRegex</span> <span class="o">.</span> <span class="p">(</span><span class="o">=~</span> <span class="n">r</span><span class="p">)</span>
-      <span class="kr">in</span> <span class="kt">T</span><span class="o">.</span><span class="n">pack</span> <span class="o">$</span> <span class="n">subRegex</span> <span class="p">(</span><span class="n">mkReg</span> <span class="n">y</span><span class="p">)</span> <span class="n">y</span> <span class="s">&quot;&quot;</span><span class="p">)</span></pre></div></td></tr>
-<tr id="section-12"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-12">&#955;</a></div><p>Make sure the result is in the right pairing order</p></td><td class="code"><div class="highlight"><pre>
-    <span class="n">ensurePair</span> <span class="ow">::</span> <span class="p">[[</span><span class="kt">Text</span><span class="p">]]</span> <span class="ow">-&gt;</span> <span class="p">[[</span><span class="kt">Text</span><span class="p">]]</span>
-    <span class="n">ensurePair</span> <span class="n">ys</span> <span class="o">|</span> <span class="n">even</span> <span class="p">(</span><span class="n">length</span> <span class="n">ys</span><span class="p">)</span> <span class="ow">=</span> <span class="n">ys</span>
-                  <span class="o">|</span> <span class="n">otherwise</span> <span class="ow">=</span> <span class="n">appendList</span> <span class="p">[[</span><span class="s">&quot;&quot;</span><span class="p">]]</span>
-      <span class="kr">where</span> <span class="n">appendList</span> <span class="o">|</span> <span class="n">toBytes</span> <span class="n">ys</span> <span class="o">=~</span> <span class="n">r</span> <span class="ow">=</span> <span class="p">(</span><span class="n">ys</span> <span class="o">++</span><span class="p">)</span>
-                       <span class="o">|</span> <span class="n">otherwise</span>       <span class="ow">=</span> <span class="p">(</span><span class="o">++</span> <span class="n">ys</span><span class="p">)</span>
+]</code></pre></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">inSections ::</span> [<span class="dt">Text</span>]
+           <span class="ot">-&gt;</span> <span class="dt">ByteString</span>
+           <span class="ot">-&gt;</span> [<span class="dt">Map</span> <span class="dt">String</span> <span class="dt">Text</span>]
+inSections xs r <span class="fu">=</span>
+  <span class="kw">let</span> sections <span class="fu">=</span> sectionOff <span class="st">&quot;&quot;</span> <span class="st">&quot;&quot;</span> xs
+  <span class="kw">in</span> <span class="fu">map</span> M.fromList sections
 
-    <span class="n">toBytes</span> <span class="ow">::</span> <span class="p">[[</span><span class="kt">Text</span><span class="p">]]</span> <span class="ow">-&gt;</span> <span class="kt">ByteString</span>
-    <span class="n">toBytes</span> <span class="ow">=</span> <span class="kt">L</span><span class="o">.</span><span class="n">pack</span> <span class="o">.</span> <span class="kt">T</span><span class="o">.</span><span class="n">unpack</span> <span class="o">.</span> <span class="n">head</span> <span class="o">.</span> <span class="n">head</span>
+  <span class="kw">where</span><span class="ot"> sectionOff ::</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> [<span class="dt">Text</span>] <span class="ot">-&gt;</span> [[(<span class="dt">String</span>, <span class="dt">Text</span>)]]
+        sectionOff code docs [] <span class="fu">=</span> [ (<span class="st">&quot;codeText&quot;</span>, code)
+                                  , (<span class="st">&quot;docsText&quot;</span>, docs)
+                                  ] <span class="fu">:</span> []
+        sectionOff code docs (y<span class="fu">:</span>ys) <span class="fu">=</span>
+          <span class="kw">if</span> T.unpack y <span class="fu">=~</span> r <span class="kw">then</span>
+            handleDocs
+            <span class="kw">else</span>
+              sectionOff (code <span class="fu">++.</span> y <span class="fu">++.</span> <span class="st">&quot;\n&quot;</span>) docs ys
+          <span class="kw">where</span> handleDocs <span class="fu">=</span>
+                  <span class="kw">if</span> T.null code <span class="kw">then</span>
+                    sectionOff code (newdocs docs) ys
+                  <span class="kw">else</span>
+                    [ (<span class="st">&quot;codeText&quot;</span>, code)
+                    , (<span class="st">&quot;docsText&quot;</span>, docs)
+                    ] <span class="fu">:</span> sectionOff <span class="st">&quot;&quot;</span> (newdocs <span class="st">&quot;&quot;</span>) ys
 
-<span class="nf">parse</span> <span class="ow">::</span> <span class="kt">Maybe</span> <span class="p">(</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">ByteString</span><span class="p">)</span> <span class="ow">-&gt;</span> <span class="kt">Text</span> <span class="ow">-&gt;</span> <span class="p">[</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">Text</span><span class="p">]</span>
-<span class="nf">parse</span> <span class="kt">Nothing</span> <span class="kr">_</span>       <span class="ow">=</span> <span class="kt">[]</span>
-<span class="nf">parse</span> <span class="p">(</span><span class="kt">Just</span> <span class="n">src</span><span class="p">)</span> <span class="n">code</span> <span class="ow">=</span> <span class="n">inSections</span> <span class="n">line</span> <span class="o">$</span> <span class="n">src</span> <span class="kt">M</span><span class="o">.!</span> <span class="s">&quot;comment&quot;</span>
-  <span class="kr">where</span> <span class="n">line</span> <span class="ow">=</span> <span class="n">filter</span> <span class="p">((</span><span class="o">/=</span><span class="p">)</span> <span class="s">&quot;#!&quot;</span> <span class="o">.</span> <span class="kt">T</span><span class="o">.</span><span class="n">take</span> <span class="mi">2</span><span class="p">)</span> <span class="o">$</span> <span class="kt">T</span><span class="o">.</span><span class="n">lines</span> <span class="n">code</span></pre></div></td></tr>
-<tr id="section-13"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-13">&#955;</a></div><p>Highlights a single chunk of Haskell code, using <strong>Pygments</strong> over stdio, and runs the text of its corresponding comment through <strong>Markdown</strong>, using the Markdown translator in <strong><a href="http://johnmacfarlane.net/pandoc/">Pandoc</a></strong>.</p>
-<p>We process the entire file in a single call to Pygments by inserting little marker comments between each section and then splitting the result string wherever our markers occur.</p></td><td class="code"><div class="highlight"><pre>
-<span class="nf">highlight</span> <span class="ow">::</span> <span class="kt">FilePath</span>
-          <span class="ow">-&gt;</span> <span class="p">[</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">Text</span><span class="p">]</span>
-          <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="p">(</span><span class="kt">String</span><span class="p">,</span> <span class="kt">Map</span> <span class="kt">String</span> <span class="kt">ByteString</span><span class="p">)</span>
-<span class="nf">highlight</span> <span class="n">src</span> <span class="n">section</span> <span class="ow">=</span> <span class="kr">do</span>
-  <span class="kr">let</span> <span class="n">language</span> <span class="ow">=</span> <span class="n">fromJust</span> <span class="o">$</span> <span class="n">getLanguage</span> <span class="n">src</span>
-      <span class="n">options</span>  <span class="ow">=</span> <span class="p">[</span><span class="s">&quot;-l&quot;</span><span class="p">,</span> <span class="kt">L</span><span class="o">.</span><span class="n">unpack</span> <span class="o">$</span> <span class="n">language</span> <span class="kt">M</span><span class="o">.!</span> <span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;-f&quot;</span><span class="p">,</span>
-                  <span class="s">&quot;html&quot;</span><span class="p">,</span> <span class="s">&quot;-O&quot;</span><span class="p">,</span> <span class="s">&quot;encoding=utf-8&quot;</span><span class="p">]</span>
-      <span class="n">input</span> <span class="ow">=</span> <span class="n">concatMap</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="ow">-&gt;</span>
-        <span class="kr">let</span> <span class="n">codeText</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">unpack</span> <span class="o">$</span> <span class="n">x</span> <span class="kt">M</span><span class="o">.!</span> <span class="s">&quot;codeText&quot;</span>
-            <span class="n">divider</span>  <span class="ow">=</span> <span class="kt">L</span><span class="o">.</span><span class="n">unpack</span> <span class="o">$</span> <span class="n">language</span> <span class="kt">M</span><span class="o">.!</span> <span class="s">&quot;dividerText&quot;</span>
-        <span class="kr">in</span> <span class="n">codeText</span> <span class="o">++</span> <span class="n">divider</span><span class="p">)</span> <span class="n">section</span>
+                newdocs d <span class="fu">=</span> d <span class="fu">++.</span> (replace r y <span class="st">&quot;&quot;</span>) <span class="fu">++.</span> <span class="st">&quot;\n&quot;</span>
 
-  <span class="n">output</span> <span class="ow">&lt;-</span> <span class="n">readProcess</span> <span class="s">&quot;pygmentize&quot;</span> <span class="n">options</span> <span class="n">input</span>
+<span class="ot">replace ::</span> <span class="dt">ByteString</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span>
+replace reg x y <span class="fu">=</span>
+  <span class="kw">let</span> str  <span class="fu">=</span> T.unpack x
+      (_, _, rp) <span class="fu">=</span> str <span class="fu">=~</span><span class="ot"> reg ::</span> (<span class="dt">String</span>, <span class="dt">String</span>, <span class="dt">String</span>)
+  <span class="kw">in</span> y <span class="fu">++.</span> (T.pack rp)
 
-  <span class="n">return</span> <span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">language</span><span class="p">)</span></pre></div></td></tr>
-<tr id="section-14"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-14">&#955;</a></div><p>After <code>highlight</code> is called, there are divider inside to show when the hightlighed stop and code begins. <code>mapSections</code> is used to take out the dividers and put them into <code>docsHtml</code> and <code>codeHtml</code> sections.</p></td><td class="code"><div class="highlight"><pre>
-<span class="nf">mapSections</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">Text</span><span class="p">]</span>
-            <span class="ow">-&gt;</span> <span class="kt">String</span>
-            <span class="ow">-&gt;</span> <span class="kt">Map</span> <span class="kt">String</span> <span class="kt">ByteString</span>
-            <span class="ow">-&gt;</span> <span class="p">[</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">Text</span><span class="p">]</span>
-<span class="nf">mapSections</span> <span class="n">section</span> <span class="n">highlighted</span> <span class="n">language</span> <span class="ow">=</span>
-  <span class="kr">let</span> <span class="n">output</span>     <span class="ow">=</span> <span class="n">subRegex</span> <span class="p">(</span><span class="n">mkRegex</span> <span class="n">highlightReplace</span><span class="p">)</span> <span class="n">highlighted</span> <span class="s">&quot;&quot;</span>
-      <span class="n">divider</span>    <span class="ow">=</span> <span class="n">mkRegex</span> <span class="o">.</span> <span class="kt">L</span><span class="o">.</span><span class="n">unpack</span> <span class="o">$</span> <span class="n">language</span> <span class="kt">M</span><span class="o">.!</span> <span class="s">&quot;dividerHtml&quot;</span>
-      <span class="n">fragments</span>  <span class="ow">=</span> <span class="n">splitRegex</span> <span class="n">divider</span> <span class="n">output</span>
-      <span class="n">packFrag</span>   <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">pack</span> <span class="o">.</span> <span class="n">genericIndex</span> <span class="n">fragments</span>
-      <span class="n">docText</span> <span class="n">s</span>  <span class="ow">=</span> <span class="n">toHTML</span> <span class="o">.</span> <span class="kt">T</span><span class="o">.</span><span class="n">unpack</span> <span class="o">$</span> <span class="n">s</span> <span class="kt">M</span><span class="o">.!</span> <span class="s">&quot;docsText&quot;</span>
-      <span class="n">codeText</span> <span class="n">i</span> <span class="ow">=</span> <span class="n">highlightStart</span> <span class="o">++.</span> <span class="n">packFrag</span> <span class="n">i</span> <span class="o">++.</span> <span class="n">highlightEnd</span>
-      <span class="n">sectLength</span> <span class="ow">=</span> <span class="p">(</span><span class="n">length</span> <span class="n">section</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
-      <span class="n">intoMap</span> <span class="n">x</span>  <span class="ow">=</span> <span class="kr">let</span> <span class="n">sect</span> <span class="ow">=</span> <span class="n">section</span> <span class="o">!!</span> <span class="n">x</span>
-                   <span class="kr">in</span> <span class="kt">M</span><span class="o">.</span><span class="n">insert</span> <span class="s">&quot;docsHtml&quot;</span> <span class="p">(</span><span class="n">docText</span> <span class="n">sect</span><span class="p">)</span> <span class="o">$</span>
-                      <span class="kt">M</span><span class="o">.</span><span class="n">insert</span> <span class="s">&quot;codeHtml&quot;</span> <span class="p">(</span><span class="n">codeText</span> <span class="n">x</span><span class="p">)</span> <span class="n">sect</span>
-  <span class="kr">in</span> <span class="n">map</span> <span class="n">intoMap</span> <span class="p">[</span><span class="mi">0</span> <span class="o">..</span> <span class="n">sectLength</span><span class="p">]</span></pre></div></td></tr>
-<tr id="section-15"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-15">&#955;</a></div><p>Determine whether or not there is a <code>Jump to</code> section</p></td><td class="code"><div class="highlight"><pre>
-<span class="nf">multiTemplate</span> <span class="ow">::</span> <span class="kt">Int</span> <span class="ow">-&gt;</span> <span class="p">[(</span><span class="kt">String</span><span class="p">,</span> <span class="kt">String</span><span class="p">)]</span>
-<span class="nf">multiTemplate</span> <span class="mi">1</span> <span class="ow">=</span> <span class="kt">[]</span>
-<span class="nf">multiTemplate</span> <span class="kr">_</span> <span class="ow">=</span> <span class="p">[(</span><span class="s">&quot;multi&quot;</span><span class="p">,</span> <span class="s">&quot;1&quot;</span><span class="p">)]</span></pre></div></td></tr>
-<tr id="section-16"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-16">&#955;</a></div><p>Produces a list of anchor tags to different files in docs</p>
-<pre><code>&lt;a class=&quot;source&quot; href=&quot;$href-link$&quot;&gt;$file-name$&lt;/a&gt;</code></pre></td><td class="code"><div class="highlight"><pre>
-<span class="nf">sourceTemplate</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">FilePath</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="p">[(</span><span class="kt">String</span><span class="p">,</span> <span class="kt">String</span><span class="p">)]</span>
-<span class="nf">sourceTemplate</span> <span class="ow">=</span> <span class="n">map</span> <span class="n">source</span>
-  <span class="kr">where</span> <span class="n">source</span> <span class="n">x</span> <span class="ow">=</span> <span class="p">(</span><span class="s">&quot;source&quot;</span><span class="p">,</span> <span class="n">concat</span>
-          <span class="p">[</span> <span class="s">&quot;&lt;a class=</span><span class="se">\&quot;</span><span class="s">source</span><span class="se">\&quot;</span><span class="s"> href=</span><span class="se">\&quot;</span><span class="s">&quot;</span>
-          <span class="p">,</span> <span class="n">takeFileName</span> <span class="o">$</span> <span class="n">destination</span> <span class="n">x</span>
-          <span class="p">,</span> <span class="s">&quot;</span><span class="se">\&quot;</span><span class="s">&gt;&quot;</span>
-          <span class="p">,</span> <span class="n">takeFileName</span> <span class="n">x</span>
-          <span class="p">,</span> <span class="s">&quot;&lt;/a&gt;&quot;</span>
-          <span class="p">])</span></pre></div></td></tr>
-<tr id="section-17"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-17">&#955;</a></div><p>Produces a list of table rows that split up code and documentation</p>
+<span class="ot">parse ::</span> <span class="dt">Maybe</span> (<span class="dt">Map</span> <span class="dt">String</span> <span class="dt">ByteString</span>) <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> [<span class="dt">Map</span> <span class="dt">String</span> <span class="dt">Text</span>]
+parse <span class="kw">Nothing</span> _       <span class="fu">=</span> []
+parse (<span class="kw">Just</span> src) code <span class="fu">=</span>
+  inSections (newlines line (M.lookup <span class="st">&quot;literate&quot;</span> src) <span class="kw">True</span>)
+             (src <span class="fu">M.!</span> <span class="st">&quot;comment&quot;</span>)
+  <span class="kw">where</span><span class="ot"> line ::</span> [<span class="dt">Text</span>]
+        line <span class="fu">=</span> <span class="fu">filter</span> ((<span class="fu">/=</span>) <span class="st">&quot;#!&quot;</span> <span class="fu">.</span> T.take <span class="dv">2</span>) <span class="fu">$</span> T.lines code
+
+<span class="ot">        newlines ::</span> [<span class="dt">Text</span>] <span class="ot">-&gt;</span> <span class="dt">Maybe</span> <span class="dt">ByteString</span> <span class="ot">-&gt;</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> [<span class="dt">Text</span>]
+        newlines [] _ _            <span class="fu">=</span> []
+        newlines xs <span class="kw">Nothing</span> _      <span class="fu">=</span> xs
+        newlines (x<span class="fu">:</span>xs) lit isText <span class="fu">=</span>
+          <span class="kw">let</span> s       <span class="fu">=</span> src <span class="fu">M.!</span> <span class="st">&quot;symbol&quot;</span>
+              r       <span class="fu">=</span> <span class="st">&quot;^&quot;</span> <span class="fu">++*</span> (src <span class="fu">M.!</span> <span class="st">&quot;symbol2&quot;</span>) <span class="fu">++*</span> <span class="st">&quot;\\s?&quot;</span>
+              r1      <span class="fu">=</span> L.pack <span class="st">&quot;^\\s*$&quot;</span>
+              (x&#39;, y) <span class="fu">=</span> <span class="kw">if</span> T.unpack x <span class="fu">=~</span> r <span class="kw">then</span>
+                     (replace r x <span class="st">&quot;&quot;</span>, <span class="kw">False</span>)
+                     <span class="kw">else</span>
+                       insert (T.unpack x <span class="fu">=~</span> r1) isText
+                         ((T.pack <span class="fu">$</span> L.unpack s)  <span class="fu">++.</span> <span class="st">&quot; &quot;</span> <span class="fu">++.</span> x)
+          <span class="kw">in</span> x&#39;<span class="fu">:</span> newlines xs lit y
+
+          <span class="kw">where</span><span class="ot"> insert ::</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> (<span class="dt">Text</span>, <span class="dt">Bool</span>)
+                insert <span class="kw">True</span> <span class="kw">True</span> _  <span class="fu">=</span> (T.pack <span class="fu">.</span> L.unpack
+                                        <span class="fu">$</span> src <span class="fu">M.!</span> <span class="st">&quot;symbol&quot;</span>, <span class="kw">True</span>)
+                insert <span class="kw">True</span> <span class="kw">False</span> _ <span class="fu">=</span> (<span class="st">&quot;&quot;</span>, <span class="kw">False</span>)
+                insert <span class="kw">False</span> _ y    <span class="fu">=</span> (y, <span class="kw">True</span>)
+</code></pre></td></tr>
+<tr id="section-5"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-5">&#955;</a></div><p>Highlights a single chunk of Haskell code, using <strong>Pygments</strong> over stdio, and runs the text of its corresponding comment through <strong>Markdown</strong>, using the Markdown translator in <strong><a href="http://johnmacfarlane.net/pandoc/">Pandoc</a></strong>.</p>
+<p>We process the entire file in a single call to Pygments by inserting little marker comments between each section and then splitting the result string wherever our markers occur.</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">highlight ::</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> [<span class="dt">Map</span> <span class="dt">String</span> <span class="dt">Text</span>] <span class="ot">-&gt;</span> [<span class="dt">Text</span>]
+highlight src section <span class="fu">=</span>
+  <span class="kw">let</span> language <span class="fu">=</span> fromJust <span class="fu">$</span> getLanguage src
+      langName <span class="fu">=</span> L.unpack <span class="fu">$</span> language <span class="fu">M.!</span> <span class="st">&quot;name&quot;</span>
+      input    <span class="fu">=</span> <span class="fu">map</span> (\x <span class="ot">-&gt;</span> T.unpack <span class="fu">$</span> x <span class="fu">M.!</span> <span class="st">&quot;codeText&quot;</span>) section
+      html     <span class="fu">=</span> B.toHtml <span class="fu">.</span> K.formatHtmlBlock K.defaultFormatOpts
+                          <span class="fu">.</span> K.highlightAs langName
+      htmlText <span class="fu">=</span> T.pack <span class="fu">.</span> L.unpack <span class="fu">.</span> renderHtml <span class="fu">.</span> html
+  <span class="kw">in</span> <span class="fu">map</span> htmlText input
+</code></pre></td></tr>
+<tr id="section-6"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-6">&#955;</a></div><p>After <code>highlight</code> is called, there are divider inside to show when the hightlighed stop and code begins. <code>mapSections</code> is used to take out the dividers and put them into <code>docsHtml</code> and <code>codeHtml</code> sections.</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">mapSections ::</span> [<span class="dt">Map</span> <span class="dt">String</span> <span class="dt">Text</span>] <span class="ot">-&gt;</span> [<span class="dt">Text</span>] <span class="ot">-&gt;</span> [<span class="dt">Map</span> <span class="dt">String</span> <span class="dt">Text</span>]
+mapSections section highlighted <span class="fu">=</span>
+  <span class="kw">let</span> docText s  <span class="fu">=</span> toHTML <span class="fu">.</span> T.unpack <span class="fu">$</span> s <span class="fu">M.!</span> <span class="st">&quot;docsText&quot;</span>
+      codeText i <span class="fu">=</span> highlighted <span class="fu">!!</span> i
+      sectLength <span class="fu">=</span> (<span class="fu">length</span> section) <span class="fu">-</span> <span class="dv">1</span>
+      intoMap x  <span class="fu">=</span> <span class="kw">let</span> sect <span class="fu">=</span> section <span class="fu">!!</span> x
+                   <span class="kw">in</span> M.insert <span class="st">&quot;docsHtml&quot;</span> (docText sect) <span class="fu">$</span>
+                      M.insert <span class="st">&quot;codeHtml&quot;</span> (codeText x) sect
+  <span class="kw">in</span> <span class="fu">map</span> intoMap [<span class="dv">0</span> <span class="fu">..</span> sectLength]
+</code></pre></td></tr>
+<tr id="section-7"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-7">&#955;</a></div><p>Determine whether or not there is a <code>Jump to</code> section</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">multiTemplate ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> [(<span class="dt">String</span>, <span class="dt">String</span>)]
+multiTemplate <span class="dv">1</span> <span class="fu">=</span> []
+multiTemplate _ <span class="fu">=</span> [(<span class="st">&quot;multi&quot;</span>, <span class="st">&quot;1&quot;</span>)]
+</code></pre></td></tr>
+<tr id="section-8"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-8">&#955;</a></div><p>Produces a list of anchor tags to different files in docs</p>
+<pre><code>&lt;a class=&quot;source&quot; href=&quot;$href-link$&quot;&gt;$file-name$&lt;/a&gt;</code></pre></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">sourceTemplate ::</span> [<span class="fu">FilePath</span>] <span class="ot">-&gt;</span> [(<span class="dt">String</span>, <span class="dt">String</span>)]
+sourceTemplate <span class="fu">=</span> <span class="fu">map</span> source
+  <span class="kw">where</span> source x <span class="fu">=</span> (<span class="st">&quot;source&quot;</span>, <span class="fu">concat</span>
+          [ <span class="st">&quot;&lt;a class=\&quot;source\&quot; href=\&quot;&quot;</span>
+          , takeFileName <span class="fu">$</span> destination x
+          , <span class="st">&quot;\&quot;&gt;&quot;</span>
+          , takeFileName x
+          , <span class="st">&quot;&lt;/a&gt;&quot;</span>
+          ])
+</code></pre></td></tr>
+<tr id="section-9"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-9">&#955;</a></div><p>Produces a list of table rows that split up code and documentation</p>
 <pre><code>&lt;tr id=&quot;section-$number$&quot;&gt;
   &lt;td class=&quot;docs&quot;&gt;
     &lt;div class=&quot;pilwrap&quot;&gt;
@@ -193,125 +210,112 @@ cabal install hyakko</code></pre></td><td class="code"><div class="highlight"><p
   &lt;td class=&quot;code&quot;&gt;
     $code-html$
   &lt;/td&gt;
-&lt;/tr&gt;</code></pre></td><td class="code"><div class="highlight"><pre>
-<span class="nf">sectionTemplate</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">Text</span><span class="p">]</span>
-                <span class="ow">-&gt;</span> <span class="p">[</span><span class="kt">Int</span><span class="p">]</span>
-                <span class="ow">-&gt;</span> <span class="p">[(</span><span class="kt">String</span><span class="p">,</span> <span class="kt">String</span><span class="p">)]</span>
-<span class="nf">sectionTemplate</span> <span class="n">section</span> <span class="ow">=</span> <span class="n">map</span> <span class="n">sections</span>
-  <span class="kr">where</span> <span class="n">sections</span> <span class="n">x</span> <span class="ow">=</span>
-          <span class="kr">let</span> <span class="n">x&#39;</span>   <span class="ow">=</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span>
-              <span class="n">sect</span> <span class="ow">=</span> <span class="n">section</span> <span class="o">!!</span> <span class="n">x</span>
-          <span class="kr">in</span> <span class="p">(</span><span class="s">&quot;section&quot;</span><span class="p">,</span> <span class="n">concat</span>
-             <span class="p">[</span> <span class="s">&quot;&lt;tr id=</span><span class="se">\&quot;</span><span class="s">section-&quot;</span>
-             <span class="p">,</span>  <span class="n">show</span> <span class="n">x&#39;</span>
-             <span class="p">,</span>  <span class="s">&quot;</span><span class="se">\&quot;</span><span class="s">&gt;&lt;td class=</span><span class="se">\&quot;</span><span class="s">docs</span><span class="se">\&quot;</span><span class="s">&gt;&quot;</span>
-             <span class="p">,</span> <span class="s">&quot;&lt;div class=</span><span class="se">\&quot;</span><span class="s">pilwrap</span><span class="se">\&quot;</span><span class="s">&gt;&quot;</span>
-             <span class="p">,</span> <span class="s">&quot;&lt;a class=</span><span class="se">\&quot;</span><span class="s">pilcrow</span><span class="se">\&quot;</span><span class="s"> href=</span><span class="se">\&quot;</span><span class="s">#section-&quot;</span>
-             <span class="p">,</span> <span class="n">show</span> <span class="n">x&#39;</span>
-             <span class="p">,</span> <span class="s">&quot;</span><span class="se">\&quot;</span><span class="s">&gt;&amp;#955;&lt;/a&gt;&lt;/div&gt;&quot;</span>
-             <span class="p">,</span> <span class="kt">T</span><span class="o">.</span><span class="n">unpack</span> <span class="o">$</span> <span class="n">sect</span> <span class="kt">M</span><span class="o">.!</span> <span class="s">&quot;docsHtml&quot;</span>
-             <span class="p">,</span> <span class="s">&quot;&lt;/td&gt;&lt;td class=</span><span class="se">\&quot;</span><span class="s">code</span><span class="se">\&quot;</span><span class="s">&gt;&quot;</span>
-             <span class="p">,</span> <span class="kt">T</span><span class="o">.</span><span class="n">unpack</span> <span class="o">$</span> <span class="n">sect</span> <span class="kt">M</span><span class="o">.!</span> <span class="s">&quot;codeHtml&quot;</span>
-             <span class="p">,</span> <span class="s">&quot;&lt;/td&gt;&lt;/tr&gt;&quot;</span>
-             <span class="p">])</span></pre></div></td></tr>
-<tr id="section-18"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-18">&#955;</a></div><p>Once all of the code is finished highlighting, we can generate the HTML file and write out the documentation. Pass the completed sections into the template found in <code>resources/hyakko.html</code></p></td><td class="code"><div class="highlight"><pre>
-<span class="nf">generateHTML</span> <span class="ow">::</span> <span class="kt">FilePath</span> <span class="ow">-&gt;</span> <span class="p">[</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">Text</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
-<span class="nf">generateHTML</span> <span class="n">src</span> <span class="n">section</span> <span class="ow">=</span> <span class="kr">do</span>
-  <span class="kr">let</span> <span class="n">title</span> <span class="ow">=</span> <span class="n">takeFileName</span> <span class="n">src</span>
-      <span class="n">dest</span>  <span class="ow">=</span> <span class="n">destination</span> <span class="n">src</span>
-  <span class="n">source</span> <span class="ow">&lt;-</span> <span class="n">sources</span>
-  <span class="n">html</span> <span class="ow">&lt;-</span> <span class="n">hyakkoTemplate</span> <span class="o">$</span> <span class="n">concat</span>
-    <span class="p">[</span> <span class="p">[(</span><span class="s">&quot;title&quot;</span><span class="p">,</span> <span class="n">title</span><span class="p">)]</span>
-    <span class="p">,</span> <span class="n">multiTemplate</span> <span class="o">$</span> <span class="n">length</span> <span class="n">source</span>
-    <span class="p">,</span> <span class="n">sourceTemplate</span> <span class="n">source</span>
-    <span class="p">,</span> <span class="n">sectionTemplate</span> <span class="n">section</span> <span class="p">[</span><span class="mi">0</span> <span class="o">..</span> <span class="p">(</span><span class="n">length</span> <span class="n">section</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
-    <span class="p">]</span>
-  <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">&quot;hyakko: &quot;</span> <span class="o">++</span> <span class="n">src</span> <span class="o">++</span> <span class="s">&quot; -&gt; &quot;</span> <span class="o">++</span> <span class="n">dest</span>
-  <span class="kt">T</span><span class="o">.</span><span class="n">writeFile</span> <span class="n">dest</span> <span class="n">html</span></pre></div></td></tr>
-<tr id="section-19"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-19">&#955;</a></div><h3 id="helpers-setup">Helpers &amp; Setup</h3></td><td class="code"><div class="highlight"><pre></pre></div></td></tr>
-<tr id="section-20"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-20">&#955;</a></div><p>A list of the languages that Hyakko supports, mapping the file extension to the name of the Pygments lexer and the symbol that indicates a comment. To add another language to Hyakko's repertoire, add it here.</p></td><td class="code"><div class="highlight"><pre>
-<span class="nf">languages</span> <span class="ow">::</span> <span class="kt">Map</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">ByteString</span><span class="p">)</span>
-<span class="nf">languages</span> <span class="ow">=</span>
-  <span class="kr">let</span> <span class="n">hashSymbol</span> <span class="ow">=</span> <span class="p">(</span><span class="s">&quot;symbol&quot;</span><span class="p">,</span> <span class="s">&quot;#&quot;</span><span class="p">)</span>
-      <span class="n">language</span>   <span class="ow">=</span> <span class="kt">M</span><span class="o">.</span><span class="n">fromList</span> <span class="p">[</span>
-          <span class="p">(</span><span class="s">&quot;.hs&quot;</span><span class="p">,</span> <span class="kt">M</span><span class="o">.</span><span class="n">fromList</span> <span class="p">[</span>
-            <span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;haskell&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s">&quot;symbol&quot;</span><span class="p">,</span> <span class="s">&quot;--&quot;</span><span class="p">)]),</span>
-          <span class="p">(</span><span class="s">&quot;.coffee&quot;</span><span class="p">,</span> <span class="kt">M</span><span class="o">.</span><span class="n">fromList</span> <span class="p">[</span>
-            <span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;coffee-script&quot;</span><span class="p">),</span> <span class="n">hashSymbol</span><span class="p">]),</span>
-          <span class="p">(</span><span class="s">&quot;.js&quot;</span><span class="p">,</span> <span class="kt">M</span><span class="o">.</span><span class="n">fromList</span> <span class="p">[</span>
-            <span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;javascript&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s">&quot;symbol&quot;</span><span class="p">,</span> <span class="s">&quot;//&quot;</span><span class="p">)]),</span>
-          <span class="p">(</span><span class="s">&quot;.py&quot;</span><span class="p">,</span> <span class="kt">M</span><span class="o">.</span><span class="n">fromList</span> <span class="p">[</span>
-            <span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;python&quot;</span><span class="p">),</span> <span class="n">hashSymbol</span><span class="p">]),</span>
-          <span class="p">(</span><span class="s">&quot;.rb&quot;</span><span class="p">,</span> <span class="kt">M</span><span class="o">.</span><span class="n">fromList</span> <span class="p">[</span>
-            <span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;ruby&quot;</span><span class="p">),</span> <span class="n">hashSymbol</span><span class="p">])</span>
-          <span class="p">]</span></pre></div></td></tr>
-<tr id="section-21"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-21">&#955;</a></div><p>Does the line begin with a comment?</p></td><td class="code"><div class="highlight"><pre>
-      <span class="n">hasComments</span> <span class="n">symbol</span> <span class="ow">=</span> <span class="s">&quot;^</span><span class="se">\\</span><span class="s">s*&quot;</span> <span class="o">++*</span> <span class="n">symbol</span> <span class="o">++*</span>  <span class="s">&quot;</span><span class="se">\\</span><span class="s">s?&quot;</span></pre></div></td></tr>
-<tr id="section-22"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-22">&#955;</a></div><p>The dividing token we feed into Pygments, to delimit the boundaries between sections.</p></td><td class="code"><div class="highlight"><pre>
-      <span class="n">tokenDivider</span> <span class="n">symbol</span> <span class="ow">=</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">++*</span> <span class="n">symbol</span> <span class="o">++*</span> <span class="s">&quot;DIVIDER</span><span class="se">\n</span><span class="s">&quot;</span></pre></div></td></tr>
-<tr id="section-23"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-23">&#955;</a></div><p>The mirror of <code>divider_text</code> that we expect Pygments to return. We can split on this to recover the original sections. <strong>Note</strong>: the class is &quot;c&quot; for Python and &quot;c1&quot; for the other languages</p></td><td class="code"><div class="highlight"><pre>
-      <span class="n">htmlDivider</span> <span class="n">symbol</span> <span class="ow">=</span> <span class="kt">L</span><span class="o">.</span><span class="n">concat</span> <span class="p">[</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">*&lt;span class=</span><span class="se">\&quot;</span><span class="s">c1?</span><span class="se">\&quot;</span><span class="s">&gt;&quot;</span>
-                                    <span class="p">,</span> <span class="n">symbol</span>
-                                    <span class="p">,</span> <span class="s">&quot;DIVIDER&lt;/span&gt;&quot;</span>
-                                    <span class="p">]</span>
-      <span class="n">intoMap</span> <span class="n">lang</span> <span class="ow">=</span> <span class="kr">let</span> <span class="n">symbol</span> <span class="ow">=</span> <span class="n">lang</span> <span class="kt">M</span><span class="o">.!</span> <span class="s">&quot;symbol&quot;</span>
-                  <span class="kr">in</span> <span class="kt">M</span><span class="o">.</span><span class="n">insert</span> <span class="s">&quot;comment&quot;</span> <span class="p">(</span><span class="n">hasComments</span> <span class="n">symbol</span><span class="p">)</span>
-                   <span class="o">.</span> <span class="kt">M</span><span class="o">.</span><span class="n">insert</span> <span class="s">&quot;dividerText&quot;</span> <span class="p">(</span><span class="n">tokenDivider</span> <span class="n">symbol</span><span class="p">)</span>
-                   <span class="o">$</span> <span class="kt">M</span><span class="o">.</span><span class="n">insert</span> <span class="s">&quot;dividerHtml&quot;</span> <span class="p">(</span><span class="n">htmlDivider</span> <span class="n">symbol</span><span class="p">)</span> <span class="n">lang</span></pre></div></td></tr>
-<tr id="section-24"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-24">&#955;</a></div><p>Build out the appropriate matchers and delimiters for each language.</p></td><td class="code"><div class="highlight"><pre>
-  <span class="kr">in</span> <span class="kt">M</span><span class="o">.</span><span class="n">map</span> <span class="n">intoMap</span> <span class="n">language</span></pre></div></td></tr>
-<tr id="section-25"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-25">&#955;</a></div><p>Get the current language we're documenting, based on the extension.</p></td><td class="code"><div class="highlight"><pre>
-<span class="nf">getLanguage</span> <span class="ow">::</span> <span class="kt">FilePath</span> <span class="ow">-&gt;</span> <span class="kt">Maybe</span> <span class="p">(</span><span class="kt">Map</span> <span class="kt">String</span> <span class="kt">ByteString</span><span class="p">)</span>
-<span class="nf">getLanguage</span> <span class="n">src</span> <span class="ow">=</span> <span class="kt">M</span><span class="o">.</span><span class="n">lookup</span> <span class="p">(</span><span class="n">takeExtension</span> <span class="n">src</span><span class="p">)</span> <span class="n">languages</span></pre></div></td></tr>
-<tr id="section-26"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-26">&#955;</a></div><p>Compute the destination HTML path for an input source file path. If the source is <code>lib/example.hs</code>, the HTML will be at docs/example.html</p></td><td class="code"><div class="highlight"><pre>
-<span class="nf">destination</span> <span class="ow">::</span> <span class="kt">FilePath</span> <span class="ow">-&gt;</span> <span class="kt">FilePath</span>
-<span class="nf">destination</span> <span class="n">fp</span> <span class="ow">=</span> <span class="s">&quot;docs&quot;</span> <span class="o">&lt;/&gt;</span> <span class="p">(</span><span class="n">takeBaseName</span> <span class="n">fp</span><span class="p">)</span> <span class="o">++</span> <span class="s">&quot;.html&quot;</span></pre></div></td></tr>
-<tr id="section-27"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-27">&#955;</a></div><p>Create the template that we will use to generate the Hyakko HTML page.</p></td><td class="code"><div class="highlight"><pre>
-<span class="nf">hyakkoTemplate</span> <span class="ow">::</span> <span class="p">[(</span><span class="kt">String</span><span class="p">,</span> <span class="kt">String</span><span class="p">)]</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="kt">Text</span>
-<span class="nf">hyakkoTemplate</span> <span class="n">var</span> <span class="ow">=</span> <span class="n">readDataFile</span> <span class="s">&quot;resources/hyakko.html&quot;</span> <span class="o">&gt;&gt;=</span>
-  <span class="n">return</span> <span class="o">.</span> <span class="kt">T</span><span class="o">.</span><span class="n">pack</span> <span class="o">.</span> <span class="n">renderTemplate</span> <span class="n">var</span> <span class="o">.</span> <span class="kt">T</span><span class="o">.</span><span class="n">unpack</span></pre></div></td></tr>
-<tr id="section-28"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-28">&#955;</a></div><p>The CSS styles we'd like to apply to the documentation.</p></td><td class="code"><div class="highlight"><pre>
-<span class="nf">hyakkoStyles</span> <span class="ow">::</span> <span class="kt">IO</span> <span class="kt">Text</span>
-<span class="nf">hyakkoStyles</span> <span class="ow">=</span> <span class="n">readDataFile</span> <span class="s">&quot;resources/hyakko.css&quot;</span></pre></div></td></tr>
-<tr id="section-29"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-29">&#955;</a></div><p>The start and end of each Pygments highlight block.</p></td><td class="code"><div class="highlight"><pre>
-<span class="nf">highlightStart</span><span class="p">,</span> <span class="n">highlightEnd</span> <span class="ow">::</span> <span class="kt">Text</span>
-<span class="nf">highlightStart</span>   <span class="ow">=</span> <span class="s">&quot;&lt;div class=</span><span class="se">\&quot;</span><span class="s">highlight</span><span class="se">\&quot;</span><span class="s">&gt;&lt;pre&gt;&quot;</span>
-<span class="nf">highlightEnd</span>     <span class="ow">=</span> <span class="s">&quot;&lt;/pre&gt;&lt;/div&gt;&quot;</span>
-
-<span class="nf">highlightReplace</span> <span class="ow">::</span> <span class="kt">String</span>
-<span class="nf">highlightReplace</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">unpack</span> <span class="n">highlightStart</span> <span class="o">++</span> <span class="s">&quot;|&quot;</span> <span class="o">++</span> <span class="kt">T</span><span class="o">.</span><span class="n">unpack</span> <span class="n">highlightEnd</span></pre></div></td></tr>
-<tr id="section-30"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-30">&#955;</a></div><p>Reads from resource path given in cabal package</p></td><td class="code"><div class="highlight"><pre>
-<span class="nf">readDataFile</span> <span class="ow">::</span> <span class="kt">FilePath</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="kt">Text</span>
-<span class="nf">readDataFile</span> <span class="ow">=</span> <span class="n">getDataFileName</span> <span class="o">&gt;=&gt;</span> <span class="kt">T</span><span class="o">.</span><span class="n">readFile</span></pre></div></td></tr>
-<tr id="section-31"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-31">&#955;</a></div><p>For each source file passed in as an argument, generate the documentation.</p></td><td class="code"><div class="highlight"><pre>
-<span class="nf">sources</span> <span class="ow">::</span> <span class="kt">IO</span> <span class="p">[</span><span class="kt">FilePath</span><span class="p">]</span>
-<span class="nf">sources</span> <span class="ow">=</span> <span class="kr">do</span>
-  <span class="n">args</span> <span class="ow">&lt;-</span> <span class="n">getArgs</span>
-  <span class="n">files</span> <span class="ow">&lt;-</span> <span class="n">forM</span> <span class="n">args</span> <span class="o">$</span> <span class="nf">\</span><span class="n">x</span> <span class="ow">-&gt;</span> <span class="kr">do</span>
-    <span class="n">isDir</span> <span class="ow">&lt;-</span> <span class="n">doesDirectoryExist</span> <span class="n">x</span>
-    <span class="kr">if</span> <span class="n">isDir</span> <span class="kr">then</span>
-      <span class="n">unpackDirectories</span> <span class="n">x</span>
-      <span class="kr">else</span>
-        <span class="n">return</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span>
-  <span class="n">return</span> <span class="o">.</span> <span class="n">sort</span> <span class="o">$</span> <span class="n">concat</span> <span class="n">files</span></pre></div></td></tr>
-<tr id="section-32"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-32">&#955;</a></div><p>Turns the directory give into a list of files including all of the files in sub-directories.</p></td><td class="code"><div class="highlight"><pre>
-<span class="nf">unpackDirectories</span> <span class="ow">::</span> <span class="kt">FilePath</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="p">[</span><span class="kt">FilePath</span><span class="p">]</span>
-<span class="nf">unpackDirectories</span> <span class="n">d</span> <span class="ow">=</span> <span class="kr">do</span>
-  <span class="kr">let</span> <span class="n">reg</span> <span class="ow">=</span> <span class="s">&quot;[^(^</span><span class="se">\\</span><span class="s">.{1,2}$)]&quot;</span> <span class="ow">::</span> <span class="kt">ByteString</span>
-  <span class="n">content</span> <span class="ow">&lt;-</span> <span class="n">getDirectoryContents</span> <span class="n">d</span> <span class="o">&gt;&gt;=</span> <span class="n">return</span> <span class="o">.</span> <span class="n">filter</span> <span class="p">(</span><span class="o">=~</span> <span class="n">reg</span><span class="p">)</span>
-  <span class="kr">let</span> <span class="n">content&#39;</span> <span class="ow">=</span> <span class="n">map</span> <span class="p">(</span><span class="n">d</span> <span class="o">&lt;/&gt;</span><span class="p">)</span> <span class="n">content</span>
-  <span class="n">files</span> <span class="ow">&lt;-</span> <span class="n">filterM</span> <span class="n">doesFileExist</span> <span class="n">content&#39;</span>
-  <span class="n">subdir</span> <span class="ow">&lt;-</span> <span class="n">filterM</span> <span class="n">doesDirectoryExist</span> <span class="n">content&#39;</span>
-  <span class="n">subcontent</span> <span class="ow">&lt;-</span> <span class="n">mapM</span> <span class="n">unpackDirectories</span> <span class="n">subdir</span> <span class="o">&gt;&gt;=</span> <span class="n">return</span> <span class="o">.</span> <span class="n">concat</span>
-  <span class="n">return</span> <span class="p">(</span><span class="n">files</span> <span class="o">++</span> <span class="n">subcontent</span><span class="p">)</span></pre></div></td></tr>
-<tr id="section-33"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-33">&#955;</a></div><p>Run the script.</p></td><td class="code"><div class="highlight"><pre>
-<span class="nf">main</span> <span class="ow">::</span> <span class="kt">IO</span> <span class="nb">()</span>
-<span class="nf">main</span> <span class="ow">=</span> <span class="kr">do</span>
-  <span class="n">style</span> <span class="ow">&lt;-</span> <span class="n">hyakkoStyles</span>
-  <span class="n">source</span> <span class="ow">&lt;-</span> <span class="n">sources</span>
-  <span class="n">createDirectoryIfMissing</span> <span class="kt">False</span> <span class="s">&quot;docs&quot;</span>
-  <span class="kt">T</span><span class="o">.</span><span class="n">writeFile</span> <span class="s">&quot;docs/hyakko.css&quot;</span> <span class="n">style</span>
-  <span class="n">generateDocumentation</span> <span class="n">source</span></pre></div></td></tr>
+&lt;/tr&gt;</code></pre></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">sectionTemplate ::</span> [<span class="dt">Map</span> <span class="dt">String</span> <span class="dt">Text</span>]
+                <span class="ot">-&gt;</span> [<span class="dt">Int</span>]
+                <span class="ot">-&gt;</span> [(<span class="dt">String</span>, <span class="dt">String</span>)]
+sectionTemplate section <span class="fu">=</span> <span class="fu">map</span> sections
+  <span class="kw">where</span> sections x <span class="fu">=</span>
+          <span class="kw">let</span> x&#39;   <span class="fu">=</span> x <span class="fu">+</span> <span class="dv">1</span>
+              sect <span class="fu">=</span> section <span class="fu">!!</span> x
+          <span class="kw">in</span> (<span class="st">&quot;section&quot;</span>, <span class="fu">concat</span>
+             [ <span class="st">&quot;&lt;tr id=\&quot;section-&quot;</span>
+             ,  <span class="fu">show</span> x&#39;
+             ,  <span class="st">&quot;\&quot;&gt;&lt;td class=\&quot;docs\&quot;&gt;&quot;</span>
+             , <span class="st">&quot;&lt;div class=\&quot;pilwrap\&quot;&gt;&quot;</span>
+             , <span class="st">&quot;&lt;a class=\&quot;pilcrow\&quot; href=\&quot;#section-&quot;</span>
+             , <span class="fu">show</span> x&#39;
+             , <span class="st">&quot;\&quot;&gt;&amp;#955;&lt;/a&gt;&lt;/div&gt;&quot;</span>
+             , T.unpack <span class="fu">$</span> sect <span class="fu">M.!</span> <span class="st">&quot;docsHtml&quot;</span>
+             , <span class="st">&quot;&lt;/td&gt;&lt;td class=\&quot;code\&quot;&gt;&quot;</span>
+             , T.unpack <span class="fu">$</span> sect <span class="fu">M.!</span> <span class="st">&quot;codeHtml&quot;</span>
+             , <span class="st">&quot;&lt;/td&gt;&lt;/tr&gt;&quot;</span>
+             ])
+</code></pre></td></tr>
+<tr id="section-10"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-10">&#955;</a></div><p>Once all of the code is finished highlighting, we can generate the HTML file and write out the documentation. Pass the completed sections into the template found in <code>resources/hyakko.html</code></p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">generateHTML ::</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> [<span class="dt">Map</span> <span class="dt">String</span> <span class="dt">Text</span>] <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
+generateHTML src section <span class="fu">=</span> <span class="kw">do</span>
+  <span class="kw">let</span> title <span class="fu">=</span> takeFileName src
+      dest  <span class="fu">=</span> destination src
+  source <span class="ot">&lt;-</span> sources
+  html <span class="ot">&lt;-</span> hyakkoTemplate <span class="fu">$</span> <span class="fu">concat</span>
+    [ [(<span class="st">&quot;title&quot;</span>, title)]
+    , multiTemplate <span class="fu">$</span> <span class="fu">length</span> source
+    , sourceTemplate source
+    , sectionTemplate section [<span class="dv">0</span> <span class="fu">..</span> (<span class="fu">length</span> section) <span class="fu">-</span> <span class="dv">1</span>]
+    ]
+  <span class="fu">putStrLn</span> <span class="fu">$</span> <span class="st">&quot;hyakko: &quot;</span> <span class="fu">++</span> src <span class="fu">++</span> <span class="st">&quot; -&gt; &quot;</span> <span class="fu">++</span> dest
+  T.writeFile dest html
+</code></pre></td></tr>
+<tr id="section-11"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-11">&#955;</a></div><h2 id="helpers-setup">Helpers &amp; Setup</h2>
+<p>A list of the languages that Hyakko supports, mapping the file extension to the name of the Pygments lexer and the symbol that indicates a comment. To add another language to Hyakko's repertoire, add it here.</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">languages ::</span> <span class="dt">Map</span> <span class="dt">String</span> (<span class="dt">Map</span> <span class="dt">String</span> <span class="dt">ByteString</span>)
+languages <span class="fu">=</span>
+  <span class="kw">let</span> hashSymbol <span class="fu">=</span> (<span class="st">&quot;symbol&quot;</span>, <span class="st">&quot;#&quot;</span>)
+      language   <span class="fu">=</span> M.fromList [
+          (<span class="st">&quot;.hs&quot;</span>, M.fromList [
+            (<span class="st">&quot;name&quot;</span>, <span class="st">&quot;haskell&quot;</span>), (<span class="st">&quot;symbol&quot;</span>, <span class="st">&quot;--&quot;</span>)]),
+          (<span class="st">&quot;.lhs&quot;</span>, M.fromList [
+            (<span class="st">&quot;name&quot;</span>, <span class="st">&quot;haskell&quot;</span>), (<span class="st">&quot;symbol&quot;</span>, <span class="st">&quot;--&quot;</span>),
+            (<span class="st">&quot;literate&quot;</span>, <span class="st">&quot;True&quot;</span>), (<span class="st">&quot;symbol2&quot;</span>, <span class="st">&quot;&gt;&quot;</span>)]),
+          (<span class="st">&quot;.coffee&quot;</span>, M.fromList [
+            (<span class="st">&quot;name&quot;</span>, <span class="st">&quot;coffee-script&quot;</span>), hashSymbol]),
+          (<span class="st">&quot;.js&quot;</span>, M.fromList [
+            (<span class="st">&quot;name&quot;</span>, <span class="st">&quot;javascript&quot;</span>), (<span class="st">&quot;symbol&quot;</span>, <span class="st">&quot;//&quot;</span>)]),
+          (<span class="st">&quot;.py&quot;</span>, M.fromList [
+            (<span class="st">&quot;name&quot;</span>, <span class="st">&quot;python&quot;</span>), hashSymbol]),
+          (<span class="st">&quot;.rb&quot;</span>, M.fromList [
+            (<span class="st">&quot;name&quot;</span>, <span class="st">&quot;ruby&quot;</span>), hashSymbol])
+          ]
+</code></pre></td></tr>
+<tr id="section-12"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-12">&#955;</a></div><p>Does the line begin with a comment?</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode">      hasComments symbol <span class="fu">=</span> <span class="st">&quot;^\\s*&quot;</span> <span class="fu">++*</span> symbol <span class="fu">++*</span>  <span class="st">&quot;\\s?&quot;</span>
+      intoMap lang <span class="fu">=</span> M.insert <span class="st">&quot;comment&quot;</span>
+                              (hasComments <span class="fu">$</span> lang <span class="fu">M.!</span> <span class="st">&quot;symbol&quot;</span>)
+                              lang
+</code></pre></td></tr>
+<tr id="section-13"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-13">&#955;</a></div><p>Build out the appropriate matchers and delimiters for each language.</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"> <span class="kw">in</span> M.map intoMap language
+</code></pre></td></tr>
+<tr id="section-14"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-14">&#955;</a></div><p>Get the current language we're documenting, based on the extension.</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">getLanguage ::</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="dt">Maybe</span> (<span class="dt">Map</span> <span class="dt">String</span> <span class="dt">ByteString</span>)
+getLanguage src <span class="fu">=</span> M.lookup (takeExtension src) languages
+</code></pre></td></tr>
+<tr id="section-15"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-15">&#955;</a></div><p>Compute the destination HTML path for an input source file path. If the source is <code>lib/example.hs</code>, the HTML will be at docs/example.html</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">destination ::</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="fu">FilePath</span>
+destination fp <span class="fu">=</span> <span class="st">&quot;docs&quot;</span> <span class="fu">&lt;/&gt;</span> (takeBaseName fp) <span class="fu">++</span> <span class="st">&quot;.html&quot;</span>
+</code></pre></td></tr>
+<tr id="section-16"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-16">&#955;</a></div><p>Create the template that we will use to generate the Hyakko HTML page.</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">hyakkoTemplate ::</span> [(<span class="dt">String</span>, <span class="dt">String</span>)] <span class="ot">-&gt;</span> <span class="dt">IO</span> <span class="dt">Text</span>
+hyakkoTemplate var <span class="fu">=</span> readDataFile <span class="st">&quot;resources/hyakko.html&quot;</span> <span class="fu">&gt;&gt;=</span>
+  <span class="fu">return</span> <span class="fu">.</span> T.pack <span class="fu">.</span> renderTemplate var <span class="fu">.</span> T.unpack
+</code></pre></td></tr>
+<tr id="section-17"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-17">&#955;</a></div><p>The CSS styles we'd like to apply to the documentation.</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">hyakkoStyles ::</span> <span class="dt">IO</span> <span class="dt">Text</span>
+hyakkoStyles <span class="fu">=</span> readDataFile <span class="st">&quot;resources/hyakko.css&quot;</span>
+</code></pre></td></tr>
+<tr id="section-18"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-18">&#955;</a></div><p>Reads from resource path given in cabal package</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">readDataFile ::</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> <span class="dt">Text</span>
+readDataFile <span class="fu">=</span> getDataFileName <span class="fu">&gt;=&gt;</span> T.readFile
+</code></pre></td></tr>
+<tr id="section-19"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-19">&#955;</a></div><p>For each source file passed in as an argument, generate the documentation.</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">sources ::</span> <span class="dt">IO</span> [<span class="fu">FilePath</span>]
+sources <span class="fu">=</span> <span class="kw">do</span>
+  args <span class="ot">&lt;-</span> getArgs
+  files <span class="ot">&lt;-</span> forM args <span class="fu">$</span> \x <span class="ot">-&gt;</span> <span class="kw">do</span>
+    isDir <span class="ot">&lt;-</span> doesDirectoryExist x
+    <span class="kw">if</span> isDir <span class="kw">then</span>
+      unpackDirectories x
+      <span class="kw">else</span>
+        <span class="fu">return</span> [x]
+  <span class="fu">return</span> <span class="fu">.</span> <span class="fu">sort</span> <span class="fu">$</span> <span class="fu">concat</span> files
+</code></pre></td></tr>
+<tr id="section-20"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-20">&#955;</a></div><p>Turns the directory give into a list of files including all of the files in sub-directories.</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">unpackDirectories ::</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> [<span class="fu">FilePath</span>]
+unpackDirectories d <span class="fu">=</span> <span class="kw">do</span>
+  <span class="kw">let</span> reg <span class="fu">=</span> <span class="st">&quot;[^(^\\.{1,2}$)]&quot;</span><span class="ot"> ::</span> <span class="dt">ByteString</span>
+  content <span class="ot">&lt;-</span> getDirectoryContents d <span class="fu">&gt;&gt;=</span> <span class="fu">return</span> <span class="fu">.</span> <span class="fu">filter</span> (<span class="fu">=~</span> reg)
+  <span class="kw">let</span> content&#39; <span class="fu">=</span> <span class="fu">map</span> (d <span class="fu">&lt;/&gt;</span>) content
+  files <span class="ot">&lt;-</span> filterM doesFileExist content&#39;
+  subdir <span class="ot">&lt;-</span> filterM doesDirectoryExist content&#39;
+  subcontent <span class="ot">&lt;-</span> <span class="fu">mapM</span> unpackDirectories subdir <span class="fu">&gt;&gt;=</span> <span class="fu">return</span> <span class="fu">.</span> <span class="fu">concat</span>
+  <span class="fu">return</span> (files <span class="fu">++</span> subcontent)
+</code></pre></td></tr>
+<tr id="section-21"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-21">&#955;</a></div><p>Run the script.</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">main ::</span> <span class="dt">IO</span> ()
+main <span class="fu">=</span> <span class="kw">do</span>
+  style <span class="ot">&lt;-</span> hyakkoStyles
+  source <span class="ot">&lt;-</span> sources
+  createDirectoryIfMissing <span class="kw">False</span> <span class="st">&quot;docs&quot;</span>
+  T.writeFile <span class="st">&quot;docs/hyakko.css&quot;</span> style
+  generateDocumentation source</code></pre></td></tr>
       </tbody>
     </table>
   </div>
