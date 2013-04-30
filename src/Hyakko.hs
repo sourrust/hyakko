@@ -98,68 +98,63 @@ generateDocumentation (x:xs) = do
 --
 inSections :: [Text]
            -> ByteString
-           -> Maybe ByteString
            -> [Map String Text]
-inSections xs r literate =
-  let clumpFn = if isNothing literate then clump else clumpLiterate
-  in [M.fromList l | l <- clumpFn sections]
-  where
-    -- Bring the lists together into groups of comment and groups of code
-    -- pattern.
-    sections :: [[Text]]
-    sections = ensurePair . map concat
-                          -- Group code into a list
-                          . groupBy' head not
-                          -- Group comments into a list
-                          $ groupBy' id id xs
+inSections xs r =
+  let sections = sectionOff "" "" xs
+  in map M.fromList sections
 
-    -- Clump sectioned off lines into doc and code text.
-    clump, clumpLiterate :: [[Text]] -> [[(String, Text)]]
-    clump [x] = clump $ ensurePair [x]
-    clump (x:y:ys) = [ ("docsText", replace x)
-                     , ("codeText", T.unlines y)
-                     ] : clump ys
-    clump _ = []
+  where sectionOff :: Text -> Text -> [Text] -> [[(String, Text)]]
+        sectionOff code docs [] = [ ("codeText", code)
+                                  , ("docsText", docs)
+                                  ] : []
+        sectionOff code docs (y:ys) =
+          if T.unpack y =~ r then
+            handleDocs
+            else
+              sectionOff (code ++. y ++. "\n") docs ys
+          where handleDocs =
+                  if T.null code then
+                    sectionOff code (newdocs docs) ys
+                  else
+                    [ ("codeText", code)
+                    , ("docsText", docs)
+                    ] : sectionOff "" (newdocs "") ys
 
-    -- Same as `clump` only reverse "docText" and "codeText"
-    clumpLiterate [x] = clumpLiterate $ ensurePair' [x]
-    clumpLiterate (x:y:ys) = [ ("docsText", T.unlines y)
-                             , ("codeText", replace x)
-                             ] : clumpLiterate ys
-    clumpLiterate _ = []
+                newdocs d = d ++. (replace r y "") ++. "\n"
 
-    -- Generalized function used to section off code and comments
-    groupBy' t t1 = groupBy $ \x y ->
-      and $ map (t1 . (=~ r) . T.unpack) [t x, t y]
-
-    -- Replace the beggining comment symbol with nothing
-    replace :: [Text] -> Text
-    replace = T.unlines . map (\x ->
-      let y = T.unpack x
-          mkReg = mkRegex . (=~ r)
-      in T.pack $ subRegex (mkReg y) y "")
-
-    -- Make sure the result is in the right pairing order
-    ensurePair :: [[Text]] -> [[Text]]
-    ensurePair ys | even (length ys) = ys
-                  | otherwise = appendList [[""]]
-      where appendList | toBytes ys =~ r = (ys ++)
-                       | otherwise       = (++ ys)
-
-    ensurePair' :: [[Text]] -> [[Text]]
-    ensurePair' ys | even (length ys) = ys
-                  | otherwise = appendList [[""]]
-      where appendList | toBytes ys =~ r = (++ ys)
-                       | otherwise       = (ys ++)
-
-    toBytes :: [[Text]] -> ByteString
-    toBytes = L.pack . T.unpack . head . head
+replace :: ByteString -> Text -> Text -> Text
+replace reg x y =
+  let str  = T.unpack x
+      (_, _, rp) = str =~ reg :: (String, String, String)
+  in y ++. (T.pack rp)
 
 parse :: Maybe (Map String ByteString) -> Text -> [Map String Text]
 parse Nothing _       = []
-parse (Just src) code = inSections line (src M.! "comment")
-                          $ M.lookup "literate" src
-  where line = filter ((/=) "#!" . T.take 2) $ T.lines code
+parse (Just src) code =
+  inSections (newlines line (M.lookup "literate" src) True)
+             (src M.! "comment")
+  where line :: [Text]
+        line = filter ((/=) "#!" . T.take 2) $ T.lines code
+
+        newlines :: [Text] -> Maybe ByteString -> Bool -> [Text]
+        newlines [] _ _            = []
+        newlines xs Nothing _      = xs
+        newlines (x:xs) lit isText =
+          let s       = src M.! "symbol"
+              r       = "^" ++* (src M.! "symbol2") ++* "\\s?"
+              r1      = L.pack "^\\s*$"
+              (x', y) = if T.unpack x =~ r then
+                     (replace r x "", False)
+                     else
+                       insert (T.unpack x =~ r1) isText
+                         ((T.pack $ L.unpack s)  ++. " " ++. x)
+          in x': newlines xs lit y
+
+          where insert :: Bool -> Bool -> Text -> (Text, Bool)
+                insert True True _  = (T.pack . L.unpack
+                                        $ src M.! "symbol", True)
+                insert True False _ = ("", False)
+                insert False _ y    = (y, True)
 
 -- Highlights a single chunk of Haskell code, using **Pygments** over stdio,
 -- and runs the text of its corresponding comment through **Markdown**,
@@ -273,8 +268,8 @@ languages =
           (".hs", M.fromList [
             ("name", "haskell"), ("symbol", "--")]),
           (".lhs", M.fromList [
-            ("name", "haskell"), ("symbol", "> "),
-            ("literate", "True")]),
+            ("name", "haskell"), ("symbol", "--"),
+            ("literate", "True"), ("symbol2", ">")]),
           (".coffee", M.fromList [
             ("name", "coffee-script"), hashSymbol]),
           (".js", M.fromList [
