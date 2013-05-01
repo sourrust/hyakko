@@ -3,15 +3,19 @@ the original quick-and-dirty, hundred-line-line, literate-programming-style
 documentation generator. It produces HTML that displays your comments
 alongside your code. Comments are passed through
 [Markdown](http://daringfireball.net/projects/markdown/syntax) and code is
-passed through [Pygments](http://pygments.org/) syntax highlighting.  This
-page is the result of running Hyakko against its own source file.
+passed through [Kate](http://johnmacfarlane.net/highlighting-kate/) syntax
+highlighting. This page is the result of running Hyakko against its own
+source file.
 
 If you install Hyakko, you can run it from the command-line:
 
     hyakko src/*.hs
 
-...will generate linked HTML documentation for the named source files,
-saving it into a `docs` folder.  The [source for
+or just specify a directory and Hyakko will search for supported files
+inside the directory recursively.
+
+Then it will generate linked HTML documentation for the named source files,
+saving it into a `docs` folder. The [source for
 Hyakko](https://github.com/sourrust/hyakko) available on GitHub.
 
 To install Hyakko
@@ -20,7 +24,7 @@ To install Hyakko
     cd hyakko
     cabal install
 
- or
+or
 
     cabal update
     cabal install hyakko
@@ -62,6 +66,8 @@ To install Hyakko
 Main Documentation Generation Functions
 ---------------------------------------
 
+Infix functions for easier concatenation with Text and ByteString.
+
 > (++.) :: Text -> Text -> Text
 > (++.) = T.append
 > {-# INLINE (++.) #-}
@@ -69,6 +75,8 @@ Main Documentation Generation Functions
 > (++*) :: ByteString -> ByteString -> ByteString
 > (++*) = L.append
 > {-# INLINE (++*) #-}
+
+Simpler type signatuted regex replace function.
 
 > replace :: ByteString -> Text -> Text -> Text
 > replace reg x y =
@@ -159,13 +167,9 @@ form:
 >                 insert True False _ = ("", False)
 >                 insert False _ y    = (y, True)
 
-Highlights a single chunk of Haskell code, using **Pygments** over stdio,
-and runs the text of its corresponding comment through **Markdown**, using
-the Markdown translator in **[Pandoc](http://johnmacfarlane.net/pandoc/)**.
-
-We process the entire file in a single call to Pygments by inserting little
-marker comments between each section and then splitting the result string
-wherever our markers occur.
+Highlights a single chunk of Haskell code, using **Kate**, and runs the text
+of its corresponding comment through **Markdown**, using the Markdown
+translator in **[Pandoc](http://johnmacfarlane.net/pandoc/)**.
 
 > highlight :: FilePath -> [Map String Text] -> [Text]
 > highlight src section =
@@ -177,9 +181,8 @@ wherever our markers occur.
 >       htmlText = T.pack . L.unpack . renderHtml . html
 >   in map htmlText input
 
-After `highlight` is called, there are divider inside to show when the
-hightlighed stop and code begins. `mapSections` is used to take out the
-dividers and put them into `docsHtml` and `codeHtml` sections.
+`mapSections` is used to insert the html parts of the mapped sections of
+text into the corresponding keys of `docsHtml` and `codeHtml`.
 
 > mapSections :: [Map String Text] -> [Text] -> [Map String Text]
 > mapSections section highlighted =
