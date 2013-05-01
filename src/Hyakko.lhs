@@ -70,6 +70,12 @@ Main Documentation Generation Functions
 > (++*) = L.append
 > {-# INLINE (++*) #-}
 
+> replace :: ByteString -> Text -> Text -> Text
+> replace reg x y =
+>   let str  = T.unpack x
+>       (_, _, rp) = str =~ reg :: (String, String, String)
+>   in y ++. (T.pack rp)
+
 Generate the documentation for a source file by reading it in, splitting it
 up into comment/code sections, highlighting them for the appropriate
 language, and merging them into an HTML template.
@@ -124,12 +130,6 @@ form:
 >                     ] : sectionOff "" (newdocs "") ys
 
 >                 newdocs d = d ++. (replace r y "") ++. "\n"
-
-> replace :: ByteString -> Text -> Text -> Text
-> replace reg x y =
->   let str  = T.unpack x
->       (_, _, rp) = str =~ reg :: (String, String, String)
->   in y ++. (T.pack rp)
 
 > parse :: Maybe (Map String ByteString) -> Text -> [Map String Text]
 > parse Nothing _       = []
