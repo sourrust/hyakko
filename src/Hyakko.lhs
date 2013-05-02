@@ -174,6 +174,11 @@ style language. If it is normal, `newlines` for returns the same list of
 >                          ((T.pack $ L.unpack s)  ++. " " ++. x)
 >           in x': newlines xs lit y
 
+Inserts a comment symbol and a single space into the documentation line and
+check if the last line was code and documentation. If the previous line was
+code and the line is blank or has just whitespace, it returns a blank `Text`
+datatype; otherwise it will return just the comment symbol.
+
 >           where insert :: Bool -> Bool -> Text -> (Text, Bool)
 >                 insert True True _  = (T.pack . L.unpack
 >                                         $ src M.! "symbol", True)
