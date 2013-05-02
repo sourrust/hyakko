@@ -126,16 +126,14 @@ form:
 >                                   ] : []
 >         sectionOff code docs (y:ys) =
 >           if T.unpack y =~ r then
->             handleDocs
+>             handleDocs code
 >             else
 >               sectionOff (code ++. y ++. "\n") docs ys
->           where handleDocs =
->                   if T.null code then
->                     sectionOff code (newdocs docs) ys
->                   else
->                     [ ("codeText", code)
->                     , ("docsText", docs)
->                     ] : sectionOff "" (newdocs "") ys
+
+>           where handleDocs "" = sectionOff code (newdocs docs) ys
+>                 handleDocs _  = [ ("codeText", code)
+>                                 , ("docsText", docs)
+>                                 ] : sectionOff "" (newdocs "") ys
 
 >                 newdocs d = d ++. (replace r y "") ++. "\n"
 
