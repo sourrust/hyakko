@@ -126,18 +126,27 @@ form:
 >                                   ] : []
 >         sectionOff code docs (y:ys) =
 >           if T.unpack y =~ r then
->             handleDocs
+>             handleDocs code
 >             else
 >               sectionOff (code ++. y ++. "\n") docs ys
->           where handleDocs =
->                   if T.null code then
->                     sectionOff code (newdocs docs) ys
->                   else
->                     [ ("codeText", code)
->                     , ("docsText", docs)
->                     ] : sectionOff "" (newdocs "") ys
+
+>           where handleDocs "" = handleHeaders code (newdocs docs) ys
+>                 handleDocs _  = [ ("codeText", code)
+>                                 , ("docsText", docs)
+>                                 ] : handleHeaders "" (newdocs "") ys
 
 >                 newdocs d = d ++. (replace r y "") ++. "\n"
+
+If there is a header markup, only for `---` and `===`, it will get its own
+line from the other documentation.
+
+>                 handleHeaders c d zs =
+>                   if T.unpack d =~ L.pack "^(---|===)+" then
+>                     [ ("codeText", c)
+>                     , ("docsText", d)
+>                     ] : sectionOff "" "" zs
+>                     else
+>                       sectionOff c d zs
 
 > parse :: Maybe (Map String ByteString) -> Text -> [Map String Text]
 > parse Nothing _       = []
