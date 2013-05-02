@@ -130,12 +130,19 @@ form:
 >             else
 >               sectionOff (code ++. y ++. "\n") docs ys
 
->           where handleDocs "" = sectionOff code (newdocs docs) ys
+>           where handleDocs "" = handleHeaders code (newdocs docs) ys
 >                 handleDocs _  = [ ("codeText", code)
 >                                 , ("docsText", docs)
->                                 ] : sectionOff "" (newdocs "") ys
+>                                 ] : handleHeaders "" (newdocs "") ys
 
 >                 newdocs d = d ++. (replace r y "") ++. "\n"
+>                 handleHeaders c d zs =
+>                   if T.unpack d =~ L.pack "^(---|===)+" then
+>                     [ ("codeText", c)
+>                     , ("docsText", d)
+>                     ] : sectionOff "" "" zs
+>                     else
+>                       sectionOff c d zs
 
 > parse :: Maybe (Map String ByteString) -> Text -> [Map String Text]
 > parse Nothing _       = []
