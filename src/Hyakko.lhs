@@ -156,6 +156,10 @@ line from the other documentation.
 >   where line :: [Text]
 >         line = filter ((/=) "#!" . T.take 2) $ T.lines code
 
+Transforms a literate style language file into its normal, non-literate
+style language. If it is normal, `newlines` for returns the same list of
+`Text` that was passed in.
+
 >         newlines :: [Text] -> Maybe ByteString -> Bool -> [Text]
 >         newlines [] _ _            = []
 >         newlines xs Nothing _      = xs
