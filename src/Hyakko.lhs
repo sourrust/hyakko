@@ -136,6 +136,10 @@ form:
 >                                 ] : handleHeaders "" (newdocs "") ys
 
 >                 newdocs d = d ++. (replace r y "") ++. "\n"
+
+If there is a header markup, only for `---` and `===`, it will get its own
+line from the other documentation.
+
 >                 handleHeaders c d zs =
 >                   if T.unpack d =~ L.pack "^(---|===)+" then
 >                     [ ("codeText", c)
