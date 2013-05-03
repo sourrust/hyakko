@@ -43,7 +43,8 @@ or
 > import qualified Data.Text as T
 > import qualified Data.Text.IO as T
 > import Data.List (sort)
-> import Data.Maybe (fromJust)
+> import Data.Maybe (fromJust, isNothing)
+> import Data.Version (showVersion)
 > import Control.Monad (filterM, (>=>), forM)
 > import qualified Text.Blaze.Html as B
 > import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
@@ -61,7 +62,7 @@ or
 >                        , takeFileName
 >                        , (</>)
 >                        )
-> import Paths_hyakko (getDataFileName)
+> import Paths_hyakko (getDataFileName, version)
 
 Main Documentation Generation Functions
 ---------------------------------------
@@ -276,7 +277,7 @@ template found in `resources/hyakko.html`
 >   let title  = takeFileName src
 >       dest   = destination (output opts) src
 >   source <- sources $ dirOrFiles opts
->   html <- hyakkoTemplate $ concat
+>   html <- hyakkoTemplate (template opts) $ concat
 >     [ [("title", title)]
 >     , multiTemplate $ length source
 >     , sourceTemplate opts source
@@ -335,9 +336,13 @@ source is `lib/example.hs`, the HTML will be at docs/example.html
 
 Create the template that we will use to generate the Hyakko HTML page.
 
-> hyakkoTemplate :: [(String, String)] -> IO Text
-> hyakkoTemplate var = readDataFile "resources/hyakko.html" >>=
->   return . T.pack . renderTemplate var . T.unpack
+> hyakkoTemplate :: Maybe FilePath -> [(String, String)] -> IO Text
+> hyakkoTemplate maybeFile var = do
+>   content <- if isNothing maybeFile then
+>                readDataFile "resources/hyakko.html"
+>                else
+>                  T.readFile $ fromJust maybeFile
+>   return . T.pack . renderTemplate var $ T.unpack content
 
 The CSS styles we'd like to apply to the documentation.
 
@@ -392,11 +397,14 @@ specifed, it will just use the ones in `defaultConfig`.
 
 > defaultConfig :: Hyakko
 > defaultConfig = Hyakko
->   { output     = "docs"
->   , css        = Nothing
->   , template   = Nothing
+>   { output     = "docs"  &= typDir
+>               &= help "use a custom output path"
+>   , css        = Nothing &= typFile
+>               &= help "use a custom css file"
+>   , template   = Nothing &= typFile
+>               &= help "use a custom pandoc template"
 >   , dirOrFiles = [] &= args &= typ "FILES/DIRS"
->   }
+>   } &= summary ("hyakko v" ++ showVersion version)
 
 Run the script.
 
