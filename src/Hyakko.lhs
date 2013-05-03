@@ -397,8 +397,11 @@ specifed, it will just use the ones in `defaultConfig`.
 > defaultConfig :: Hyakko
 > defaultConfig = Hyakko
 >   { output     = "docs"  &= typDir
+>               &= help "use a custom output path"
 >   , css        = Nothing &= typFile
+>               &= help "use a custom css file"
 >   , template   = Nothing &= typFile
+>               &= help "use a custom pandoc template"
 >   , dirOrFiles = [] &= args &= typ "FILES/DIRS"
 >   }
 
