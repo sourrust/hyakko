@@ -402,8 +402,10 @@ Run the script.
 
 > main :: IO ()
 > main = do
->   style <- hyakkoStyles
->   source <- sources
->   createDirectoryIfMissing False "docs"
->   T.writeFile "docs/hyakko.css" style
->   generateDocumentation source
+>   opts <- cmdArgs defaultConfig
+>   style <- hyakkoStyles $ css opts
+>   source <- sources $ dirOrFiles opts
+>   let dirout = output opts
+>   createDirectoryIfMissing False dirout
+>   T.writeFile (dirout </> "hyakko.css") style
+>   generateDocumentation opts source
