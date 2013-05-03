@@ -352,10 +352,9 @@ Reads from resource path given in cabal package
 
 For each source file passed in as an argument, generate the documentation.
 
-> sources :: IO [FilePath]
-> sources = do
->   args <- getArgs
->   files <- forM args $ \x -> do
+> sources :: [FilePath] -> IO [FilePath]
+> sources file = do
+>   files <- forM file $ \x -> do
 >     isDir <- doesDirectoryExist x
 >     if isDir then
 >       unpackDirectories x
