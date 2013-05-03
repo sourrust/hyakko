@@ -276,7 +276,7 @@ template found in `resources/hyakko.html`
 >   let title  = takeFileName src
 >       dest   = destination (output opts) src
 >   source <- sources $ dirOrFiles opts
->   html <- hyakkoTemplate $ concat
+>   html <- hyakkoTemplate (template opts) $ concat
 >     [ [("title", title)]
 >     , multiTemplate $ length source
 >     , sourceTemplate opts source
@@ -335,8 +335,10 @@ source is `lib/example.hs`, the HTML will be at docs/example.html
 
 Create the template that we will use to generate the Hyakko HTML page.
 
-> hyakkoTemplate :: [(String, String)] -> IO Text
-> hyakkoTemplate var = readDataFile "resources/hyakko.html" >>=
+> hyakkoTemplate :: Maybe FilePath -> [(String, String)] -> IO Text
+> hyakkoTemplate Nothing var = readDataFile "resources/hyakko.html" >>=
+>   return . T.pack . renderTemplate var . T.unpack
+> hyakkoTemplate (Just file) var = T.readFile file >>=
 >   return . T.pack . renderTemplate var . T.unpack
 
 The CSS styles we'd like to apply to the documentation.
