@@ -88,19 +88,19 @@ Generate the documentation for a source file by reading it in, splitting it
 up into comment/code sections, highlighting them for the appropriate
 language, and merging them into an HTML template.
 
-> generateDocumentation :: [FilePath] -> IO ()
-> generateDocumentation [] = return ()
-> generateDocumentation (x:xs) = do
->   code <- T.readFile x
->   let sections = parse (getLanguage x) code
->   if null sections then
->     putStrLn $ "hyakko doesn't support the language extension "
->              ++ takeExtension x
->     else do
->       let output = highlight x sections
->           y      = mapSections sections output
->       generateHTML x y
->       generateDocumentation xs
+> generateDocumentation :: Hyakko -> [FilePath] -> IO ()
+> generateDocumentation opts xs = mapM_ generate xs
+>   where generate :: FilePath -> IO ()
+>         generate x = do
+>           code <- T.readFile x
+>           let sections = parse (getLanguage x) code
+>           if null sections then
+>             putStrLn $ "hyakko doesn't support the language extension "
+>                      ++ takeExtension x
+>             else do
+>               let highlighted = highlight x sections
+>                   y      = mapSections sections highlighted
+>               generateHTML opts x y
 
 Given a string of source code, parse out each comment and the code that
 follows it, and create an individual **section** for it. Sections take the
