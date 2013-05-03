@@ -222,11 +222,11 @@ Produces a list of anchor tags to different files in docs
 
     <a class="source" href="$href-link$">$file-name$</a>
 
-> sourceTemplate :: [FilePath] -> [(String, String)]
-> sourceTemplate = map source
+> sourceTemplate :: Hyakko -> [FilePath] -> [(String, String)]
+> sourceTemplate opts = map source
 >   where source x = ("source", concat
 >           [ "<a class=\"source\" href=\""
->           , takeFileName $ destination x
+>           , takeFileName $ destination (output opts) x
 >           , "\">"
 >           , takeFileName x
 >           , "</a>"
@@ -271,15 +271,15 @@ Once all of the code is finished highlighting, we can generate the HTML file
 and write out the documentation. Pass the completed sections into the
 template found in `resources/hyakko.html`
 
-> generateHTML :: FilePath -> [Map String Text] -> IO ()
-> generateHTML src section = do
->   let title = takeFileName src
->       dest  = destination src
->   source <- sources
+> generateHTML :: Hyakko -> FilePath -> [Map String Text] -> IO ()
+> generateHTML opts src section = do
+>   let title  = takeFileName src
+>       dest   = destination (output opts) src
+>   source <- sources $ dirOrFiles opts
 >   html <- hyakkoTemplate $ concat
 >     [ [("title", title)]
 >     , multiTemplate $ length source
->     , sourceTemplate source
+>     , sourceTemplate opts source
 >     , sectionTemplate section [0 .. (length section) - 1]
 >     ]
 >   putStrLn $ "hyakko: " ++ src ++ " -> " ++ dest
