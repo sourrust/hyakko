@@ -44,6 +44,7 @@ or
 > import qualified Data.Text.IO as T
 > import Data.List (sort)
 > import Data.Maybe (fromJust, isNothing)
+> import Data.Version (showVersion)
 > import Control.Monad (filterM, (>=>), forM)
 > import qualified Text.Blaze.Html as B
 > import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
@@ -61,7 +62,7 @@ or
 >                        , takeFileName
 >                        , (</>)
 >                        )
-> import Paths_hyakko (getDataFileName)
+> import Paths_hyakko (getDataFileName, version)
 
 Main Documentation Generation Functions
 ---------------------------------------
@@ -403,7 +404,7 @@ specifed, it will just use the ones in `defaultConfig`.
 >   , template   = Nothing &= typFile
 >               &= help "use a custom pandoc template"
 >   , dirOrFiles = [] &= args &= typ "FILES/DIRS"
->   }
+>   } &= summary ("hyakko v" ++ showVersion version)
 
 Run the script.
 
