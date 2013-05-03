@@ -29,7 +29,7 @@ or
     cabal update
     cabal install hyakko
 
-> {-# LANGUAGE OverloadedStrings #-}
+> {-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
 
 > module Main where
 
@@ -50,12 +50,12 @@ or
 > import qualified Text.Highlighting.Kate as K
 > import Text.Pandoc.Templates
 > import Text.Regex.PCRE ((=~))
+> import System.Console.CmdArgs
 > import System.Directory ( getDirectoryContents
 >                         , doesDirectoryExist
 >                         , doesFileExist
 >                         , createDirectoryIfMissing
 >                         )
-> import System.Environment (getArgs)
 > import System.FilePath ( takeBaseName
 >                        , takeExtension
 >                        , takeFileName
@@ -88,19 +88,19 @@ Generate the documentation for a source file by reading it in, splitting it
 up into comment/code sections, highlighting them for the appropriate
 language, and merging them into an HTML template.
 
-> generateDocumentation :: [FilePath] -> IO ()
-> generateDocumentation [] = return ()
-> generateDocumentation (x:xs) = do
->   code <- T.readFile x
->   let sections = parse (getLanguage x) code
->   if null sections then
->     putStrLn $ "hyakko doesn't support the language extension "
->              ++ takeExtension x
->     else do
->       let output = highlight x sections
->           y      = mapSections sections output
->       generateHTML x y
->       generateDocumentation xs
+> generateDocumentation :: Hyakko -> [FilePath] -> IO ()
+> generateDocumentation opts xs = mapM_ generate xs
+>   where generate :: FilePath -> IO ()
+>         generate x = do
+>           code <- T.readFile x
+>           let sections = parse (getLanguage x) code
+>           if null sections then
+>             putStrLn $ "hyakko doesn't support the language extension "
+>                      ++ takeExtension x
+>             else do
+>               let highlighted = highlight x sections
+>                   y      = mapSections sections highlighted
+>               generateHTML opts x y
 
 Given a string of source code, parse out each comment and the code that
 follows it, and create an individual **section** for it. Sections take the
@@ -222,11 +222,11 @@ Produces a list of anchor tags to different files in docs
 
     <a class="source" href="$href-link$">$file-name$</a>
 
-> sourceTemplate :: [FilePath] -> [(String, String)]
-> sourceTemplate = map source
+> sourceTemplate :: Hyakko -> [FilePath] -> [(String, String)]
+> sourceTemplate opts = map source
 >   where source x = ("source", concat
 >           [ "<a class=\"source\" href=\""
->           , takeFileName $ destination x
+>           , takeFileName $ destination (output opts) x
 >           , "\">"
 >           , takeFileName x
 >           , "</a>"
@@ -271,15 +271,15 @@ Once all of the code is finished highlighting, we can generate the HTML file
 and write out the documentation. Pass the completed sections into the
 template found in `resources/hyakko.html`
 
-> generateHTML :: FilePath -> [Map String Text] -> IO ()
-> generateHTML src section = do
->   let title = takeFileName src
->       dest  = destination src
->   source <- sources
+> generateHTML :: Hyakko -> FilePath -> [Map String Text] -> IO ()
+> generateHTML opts src section = do
+>   let title  = takeFileName src
+>       dest   = destination (output opts) src
+>   source <- sources $ dirOrFiles opts
 >   html <- hyakkoTemplate $ concat
 >     [ [("title", title)]
 >     , multiTemplate $ length source
->     , sourceTemplate source
+>     , sourceTemplate opts source
 >     , sectionTemplate section [0 .. (length section) - 1]
 >     ]
 >   putStrLn $ "hyakko: " ++ src ++ " -> " ++ dest
@@ -330,8 +330,8 @@ Get the current language we're documenting, based on the extension.
 Compute the destination HTML path for an input source file path. If the
 source is `lib/example.hs`, the HTML will be at docs/example.html
 
-> destination :: FilePath -> FilePath
-> destination fp = "docs" </> (takeBaseName fp) ++ ".html"
+> destination :: FilePath -> FilePath -> FilePath
+> destination out fp = out </> (takeBaseName fp) ++ ".html"
 
 Create the template that we will use to generate the Hyakko HTML page.
 
@@ -341,8 +341,9 @@ Create the template that we will use to generate the Hyakko HTML page.
 
 The CSS styles we'd like to apply to the documentation.
 
-> hyakkoStyles :: IO Text
-> hyakkoStyles = readDataFile "resources/hyakko.css"
+> hyakkoStyles :: Maybe FilePath -> IO Text
+> hyakkoStyles Nothing    = readDataFile "resources/hyakko.css"
+> hyakkoStyles (Just file) = T.readFile file
 
 Reads from resource path given in cabal package
 
@@ -351,10 +352,9 @@ Reads from resource path given in cabal package
 
 For each source file passed in as an argument, generate the documentation.
 
-> sources :: IO [FilePath]
-> sources = do
->   args <- getArgs
->   files <- forM args $ \x -> do
+> sources :: [FilePath] -> IO [FilePath]
+> sources file = do
+>   files <- forM file $ \x -> do
 >     isDir <- doesDirectoryExist x
 >     if isDir then
 >       unpackDirectories x
@@ -375,12 +375,37 @@ sub-directories.
 >   subcontent <- mapM unpackDirectories subdir >>= return . concat
 >   return (files ++ subcontent)
 
+Configuration
+-------------
+
+Data structure for command line argument parsing.
+
+> data Hyakko =
+>   Hyakko { output     :: FilePath
+>          , css        :: Maybe FilePath
+>          , template   :: Maybe FilePath
+>          , dirOrFiles :: [FilePath]
+>          } deriving (Show, Data, Typeable)
+
+Default configuration **options**. If no arguments for these flags are
+specifed, it will just use the ones in `defaultConfig`.
+
+> defaultConfig :: Hyakko
+> defaultConfig = Hyakko
+>   { output     = "docs"
+>   , css        = Nothing
+>   , template   = Nothing
+>   , dirOrFiles = [] &= args &= typ "FILES/DIRS"
+>   }
+
 Run the script.
 
 > main :: IO ()
 > main = do
->   style <- hyakkoStyles
->   source <- sources
->   createDirectoryIfMissing False "docs"
->   T.writeFile "docs/hyakko.css" style
->   generateDocumentation source
+>   opts <- cmdArgs defaultConfig
+>   style <- hyakkoStyles $ css opts
+>   source <- sources $ dirOrFiles opts
+>   let dirout = output opts
+>   createDirectoryIfMissing False dirout
+>   T.writeFile (dirout </> "hyakko.css") style
+>   generateDocumentation opts source
