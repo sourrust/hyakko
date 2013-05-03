@@ -90,6 +90,8 @@ up into comment/code sections, highlighting them for the appropriate
 language, and merging them into an HTML template.
 
 > generateDocumentation :: Hyakko -> [FilePath] -> IO ()
+> generateDocumentation _ [] =
+>   putStrLn "hyakko: no files or options given (try --help)"
 > generateDocumentation opts xs = mapM_ generate xs
 >   where generate :: FilePath -> IO ()
 >         generate x = do
