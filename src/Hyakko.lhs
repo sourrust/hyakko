@@ -56,7 +56,6 @@ or
 >                         , doesFileExist
 >                         , createDirectoryIfMissing
 >                         )
-> import System.Environment (getArgs)
 > import System.FilePath ( takeBaseName
 >                        , takeExtension
 >                        , takeFileName
