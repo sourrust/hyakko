@@ -47,7 +47,8 @@ cabal install hyakko</code></pre></td><td class="code"><pre class="sourceCode"><
 <span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Data.Text</span> <span class="kw">as</span> <span class="dt">T</span>
 <span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Data.Text.IO</span> <span class="kw">as</span> <span class="dt">T</span>
 <span class="kw">import</span> <span class="dt">Data.List</span> (<span class="fu">sort</span>)
-<span class="kw">import</span> <span class="dt">Data.Maybe</span> (fromJust)
+<span class="kw">import</span> <span class="dt">Data.Maybe</span> (fromJust, isNothing)
+<span class="kw">import</span> <span class="dt">Data.Version</span> (showVersion)
 <span class="kw">import</span> <span class="dt">Control.Monad</span> (filterM, (<span class="fu">&gt;=&gt;</span>), forM)
 <span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Text.Blaze.Html</span> <span class="kw">as</span> <span class="dt">B</span>
 <span class="kw">import</span> <span class="dt">Text.Blaze.Html.Renderer.Utf8</span> (renderHtml)
@@ -65,7 +66,7 @@ cabal install hyakko</code></pre></td><td class="code"><pre class="sourceCode"><
                        , takeFileName
                        , (<span class="fu">&lt;/&gt;</span>)
                        )
-<span class="kw">import</span> <span class="dt">Paths_hyakko</span> (getDataFileName)
+<span class="kw">import</span> <span class="dt">Paths_hyakko</span> (getDataFileName, version)
 </code></pre></td></tr>
 <tr id="section-2"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-2">&#955;</a></div><h2 id="main-documentation-generation-functions">Main Documentation Generation Functions</h2></td><td class="code"><pre class="sourceCode"><code class="sourceCode"></code></pre></td></tr>
 <tr id="section-3"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-3">&#955;</a></div><p>Infix functions for easier concatenation with Text and ByteString.</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">(++.) ::</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span>
@@ -83,6 +84,8 @@ replace reg x y <span class="fu">=</span>
   <span class="kw">in</span> y <span class="fu">++.</span> (T.pack rp)
 </code></pre></td></tr>
 <tr id="section-5"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-5">&#955;</a></div><p>Generate the documentation for a source file by reading it in, splitting it up into comment/code sections, highlighting them for the appropriate language, and merging them into an HTML template.</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">generateDocumentation ::</span> <span class="dt">Hyakko</span> <span class="ot">-&gt;</span> [<span class="fu">FilePath</span>] <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
+generateDocumentation _ [] <span class="fu">=</span>
+  <span class="fu">putStrLn</span> <span class="st">&quot;hyakko: no files or options given (try --help)&quot;</span>
 generateDocumentation opts xs <span class="fu">=</span> <span class="fu">mapM_</span> generate xs
   <span class="kw">where</span><span class="ot"> generate ::</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
         generate x <span class="fu">=</span> <span class="kw">do</span>
@@ -234,7 +237,7 @@ generateHTML opts src section <span class="fu">=</span> <span class="kw">do</spa
   <span class="kw">let</span> title  <span class="fu">=</span> takeFileName src
       dest   <span class="fu">=</span> destination (output opts) src
   source <span class="ot">&lt;-</span> sources <span class="fu">$</span> dirOrFiles opts
-  html <span class="ot">&lt;-</span> hyakkoTemplate <span class="fu">$</span> <span class="fu">concat</span>
+  html <span class="ot">&lt;-</span> hyakkoTemplate (template opts) <span class="fu">$</span> <span class="fu">concat</span>
     [ [(<span class="st">&quot;title&quot;</span>, title)]
     , multiTemplate <span class="fu">$</span> <span class="fu">length</span> source
     , sourceTemplate opts source
@@ -276,9 +279,13 @@ getLanguage src <span class="fu">=</span> M.lookup (takeExtension src) languages
 <tr id="section-21"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-21">&#955;</a></div><p>Compute the destination HTML path for an input source file path. If the source is <code>lib/example.hs</code>, the HTML will be at docs/example.html</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">destination ::</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="fu">FilePath</span>
 destination out fp <span class="fu">=</span> out <span class="fu">&lt;/&gt;</span> (takeBaseName fp) <span class="fu">++</span> <span class="st">&quot;.html&quot;</span>
 </code></pre></td></tr>
-<tr id="section-22"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-22">&#955;</a></div><p>Create the template that we will use to generate the Hyakko HTML page.</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">hyakkoTemplate ::</span> [(<span class="dt">String</span>, <span class="dt">String</span>)] <span class="ot">-&gt;</span> <span class="dt">IO</span> <span class="dt">Text</span>
-hyakkoTemplate var <span class="fu">=</span> readDataFile <span class="st">&quot;resources/hyakko.html&quot;</span> <span class="fu">&gt;&gt;=</span>
-  <span class="fu">return</span> <span class="fu">.</span> T.pack <span class="fu">.</span> renderTemplate var <span class="fu">.</span> T.unpack
+<tr id="section-22"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-22">&#955;</a></div><p>Create the template that we will use to generate the Hyakko HTML page.</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">hyakkoTemplate ::</span> <span class="dt">Maybe</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> [(<span class="dt">String</span>, <span class="dt">String</span>)] <span class="ot">-&gt;</span> <span class="dt">IO</span> <span class="dt">Text</span>
+hyakkoTemplate maybeFile var <span class="fu">=</span> <span class="kw">do</span>
+  content <span class="ot">&lt;-</span> <span class="kw">if</span> isNothing maybeFile <span class="kw">then</span>
+               readDataFile <span class="st">&quot;resources/hyakko.html&quot;</span>
+               <span class="kw">else</span>
+                 T.readFile <span class="fu">$</span> fromJust maybeFile
+  <span class="fu">return</span> <span class="fu">.</span> T.pack <span class="fu">.</span> renderTemplate var <span class="fu">$</span> T.unpack content
 </code></pre></td></tr>
 <tr id="section-23"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-23">&#955;</a></div><p>The CSS styles we'd like to apply to the documentation.</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">hyakkoStyles ::</span> <span class="dt">Maybe</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> <span class="dt">Text</span>
 hyakkoStyles <span class="kw">Nothing</span>    <span class="fu">=</span> readDataFile <span class="st">&quot;resources/hyakko.css&quot;</span>
@@ -317,11 +324,14 @@ unpackDirectories d <span class="fu">=</span> <span class="kw">do</span>
 </code></pre></td></tr>
 <tr id="section-29"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-29">&#955;</a></div><p>Default configuration <strong>options</strong>. If no arguments for these flags are specifed, it will just use the ones in <code>defaultConfig</code>.</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">defaultConfig ::</span> <span class="dt">Hyakko</span>
 defaultConfig <span class="fu">=</span> <span class="dt">Hyakko</span>
-  { output     <span class="fu">=</span> <span class="st">&quot;docs&quot;</span>
-  , css        <span class="fu">=</span> <span class="kw">Nothing</span>
-  , template   <span class="fu">=</span> <span class="kw">Nothing</span>
+  { output     <span class="fu">=</span> <span class="st">&quot;docs&quot;</span>  <span class="fu">&amp;=</span> typDir
+              <span class="fu">&amp;=</span> help <span class="st">&quot;use a custom output path&quot;</span>
+  , css        <span class="fu">=</span> <span class="kw">Nothing</span> <span class="fu">&amp;=</span> typFile
+              <span class="fu">&amp;=</span> help <span class="st">&quot;use a custom css file&quot;</span>
+  , template   <span class="fu">=</span> <span class="kw">Nothing</span> <span class="fu">&amp;=</span> typFile
+              <span class="fu">&amp;=</span> help <span class="st">&quot;use a custom pandoc template&quot;</span>
   , dirOrFiles <span class="fu">=</span> [] <span class="fu">&amp;=</span> args <span class="fu">&amp;=</span> typ <span class="st">&quot;FILES/DIRS&quot;</span>
-  }
+  } <span class="fu">&amp;=</span> summary (<span class="st">&quot;hyakko v&quot;</span> <span class="fu">++</span> showVersion version)
 </code></pre></td></tr>
 <tr id="section-30"><td class="docs"><div class="pilwrap"><a class="pilcrow" href="#section-30">&#955;</a></div><p>Run the script.</p></td><td class="code"><pre class="sourceCode"><code class="sourceCode"><span class="ot">main ::</span> <span class="dt">IO</span> ()
 main <span class="fu">=</span> <span class="kw">do</span>
