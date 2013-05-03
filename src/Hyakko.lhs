@@ -43,7 +43,7 @@ or
 > import qualified Data.Text as T
 > import qualified Data.Text.IO as T
 > import Data.List (sort)
-> import Data.Maybe (fromJust)
+> import Data.Maybe (fromJust, isNothing)
 > import Control.Monad (filterM, (>=>), forM)
 > import qualified Text.Blaze.Html as B
 > import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
@@ -336,10 +336,12 @@ source is `lib/example.hs`, the HTML will be at docs/example.html
 Create the template that we will use to generate the Hyakko HTML page.
 
 > hyakkoTemplate :: Maybe FilePath -> [(String, String)] -> IO Text
-> hyakkoTemplate Nothing var = readDataFile "resources/hyakko.html" >>=
->   return . T.pack . renderTemplate var . T.unpack
-> hyakkoTemplate (Just file) var = T.readFile file >>=
->   return . T.pack . renderTemplate var . T.unpack
+> hyakkoTemplate maybeFile var = do
+>   content <- if isNothing maybeFile then
+>                readDataFile "resources/hyakko.html"
+>                else
+>                  T.readFile $ fromJust maybeFile
+>   return . T.pack . renderTemplate var $ T.unpack content
 
 The CSS styles we'd like to apply to the documentation.
 
