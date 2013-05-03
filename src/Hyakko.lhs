@@ -330,8 +330,8 @@ Get the current language we're documenting, based on the extension.
 Compute the destination HTML path for an input source file path. If the
 source is `lib/example.hs`, the HTML will be at docs/example.html
 
-> destination :: FilePath -> FilePath
-> destination fp = "docs" </> (takeBaseName fp) ++ ".html"
+> destination :: FilePath -> FilePath -> FilePath
+> destination out fp = out </> (takeBaseName fp) ++ ".html"
 
 Create the template that we will use to generate the Hyakko HTML page.
 
