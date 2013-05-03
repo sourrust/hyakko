@@ -396,9 +396,9 @@ specifed, it will just use the ones in `defaultConfig`.
 
 > defaultConfig :: Hyakko
 > defaultConfig = Hyakko
->   { output     = "docs"
->   , css        = Nothing
->   , template   = Nothing
+>   { output     = "docs"  &= typDir
+>   , css        = Nothing &= typFile
+>   , template   = Nothing &= typFile
 >   , dirOrFiles = [] &= args &= typ "FILES/DIRS"
 >   }
 
