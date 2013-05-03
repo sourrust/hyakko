@@ -29,7 +29,7 @@ or
     cabal update
     cabal install hyakko
 
-> {-# LANGUAGE OverloadedStrings #-}
+> {-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
 
 > module Main where
 
@@ -50,6 +50,7 @@ or
 > import qualified Text.Highlighting.Kate as K
 > import Text.Pandoc.Templates
 > import Text.Regex.PCRE ((=~))
+> import System.Console.CmdArgs
 > import System.Directory ( getDirectoryContents
 >                         , doesDirectoryExist
 >                         , doesFileExist
@@ -374,6 +375,29 @@ sub-directories.
 >   subdir <- filterM doesDirectoryExist content'
 >   subcontent <- mapM unpackDirectories subdir >>= return . concat
 >   return (files ++ subcontent)
+
+Configuration
+-------------
+
+Data structure for command line argument parsing.
+
+> data Hyakko =
+>   Hyakko { output     :: FilePath
+>          , css        :: Maybe FilePath
+>          , template   :: Maybe FilePath
+>          , dirOrFiles :: [FilePath]
+>          } deriving (Show, Data, Typeable)
+
+Default configuration **options**. If no arguments for these flags are
+specifed, it will just use the ones in `defaultConfig`.
+
+> defaultConfig :: Hyakko
+> defaultConfig = Hyakko
+>   { output     = "docs"
+>   , css        = Nothing
+>   , template   = Nothing
+>   , dirOrFiles = [] &= args &= typ "FILES/DIRS"
+>   }
 
 Run the script.
 
