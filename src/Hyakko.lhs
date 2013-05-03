@@ -341,8 +341,9 @@ Create the template that we will use to generate the Hyakko HTML page.
 
 The CSS styles we'd like to apply to the documentation.
 
-> hyakkoStyles :: IO Text
-> hyakkoStyles = readDataFile "resources/hyakko.css"
+> hyakkoStyles :: Maybe FilePath -> IO Text
+> hyakkoStyles Nothing    = readDataFile "resources/hyakko.css"
+> hyakkoStyles (Just file) = T.readFile file
 
 Reads from resource path given in cabal package
 
