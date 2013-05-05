@@ -364,7 +364,7 @@ For each source file passed in as an argument, generate the documentation.
 >   files <- forM file $ \x -> do
 >     isDir <- doesDirectoryExist x
 >     if isDir then
->       unpackDirectories x
+>       unpackDirectories x >>= return . fst
 >       else
 >         return [x]
 >   return . sort $ concat files
@@ -372,15 +372,16 @@ For each source file passed in as an argument, generate the documentation.
 Turns the directory give into a list of files including all of the files in
 sub-directories.
 
-> unpackDirectories :: FilePath -> IO [FilePath]
+> unpackDirectories :: FilePath -> IO ([FilePath], [FilePath])
 > unpackDirectories d = do
->   let reg = "[^(^\\.{1,2}$)]" :: ByteString
+>   let reg = L.pack "[^(^\\.{1,2}$)]"
 >   content <- getDirectoryContents d >>= return . filter (=~ reg)
 >   let content' = map (d </>) content
 >   files <- filterM doesFileExist content'
 >   subdir <- filterM doesDirectoryExist content'
->   subcontent <- mapM unpackDirectories subdir >>= return . concat
->   return (files ++ subcontent)
+>   subcontent <- mapM unpackDirectories subdir >>= \x ->
+>     return (concatMap fst x, concatMap snd x)
+>   return (files ++ fst subcontent, subdir ++ snd subcontent)
 
 Configuration
 -------------
