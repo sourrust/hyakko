@@ -45,7 +45,7 @@ or
 > import Data.List (sort)
 > import Data.Maybe (fromJust, isNothing)
 > import Data.Version (showVersion)
-> import Control.Monad (filterM, (>=>), forM)
+> import Control.Monad (filterM, (>=>), forM, forM_)
 > import qualified Text.Blaze.Html as B
 > import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
 > import qualified Text.Highlighting.Kate as K
@@ -56,13 +56,15 @@ or
 >                         , doesDirectoryExist
 >                         , doesFileExist
 >                         , createDirectoryIfMissing
+>                         , copyFile
 >                         )
 > import System.FilePath ( takeBaseName
 >                        , takeExtension
 >                        , takeFileName
 >                        , (</>)
+>                        , addTrailingPathSeparator
 >                        )
-> import Paths_hyakko (getDataFileName, version)
+> import Paths_hyakko (getDataFileName, version, getDataDir)
 
 Main Documentation Generation Functions
 ---------------------------------------
@@ -382,6 +384,30 @@ sub-directories.
 >   subcontent <- mapM unpackDirectories subdir >>= \x ->
 >     return (concatMap fst x, concatMap snd x)
 >   return (files ++ fst subcontent, subdir ++ snd subcontent)
+
+> copyDirectory :: Hyakko -> FilePath -> IO ()
+> copyDirectory opts dir = do
+>   (files, dirs) <- unpackDirectories dir
+>   dataDir       <- getDataDir
+>   let oldLocation = T.pack . addTrailingPathSeparator $ dataDir
+>                       </> "resources"
+>                       </> (fromJust $ layout opts)
+>       dirout      = output opts
+>   createDirectoryIfMissing False $ dirout </> "public"
+
+Create all the directories needed to put future files into.
+
+>   forM_ dirs $ \x -> do
+>     let x'   = T.pack x
+>         dir' = T.unpack $ T.replace oldLocation "" x'
+>     createDirectoryIfMissing False $ dirout </> dir'
+
+Copy all the files into the recently created directories.
+
+>   forM_ files $ \x -> do
+>     let x'   = T.pack x
+>         file = dirout </> (T.unpack $ T.replace oldLocation "" x')
+>     copyFile x file
 
 Configuration
 -------------
