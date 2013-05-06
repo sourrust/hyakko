@@ -323,14 +323,22 @@ template found in `resources/hyakko.html`
 >       maybeLayout = layout opts
 >       header      = T.unpack $ (section !! 0) M.! "docsHtml"
 >       isHeader    = header =~ L.pack "^<(h\\d)"
+>       count       = [0 .. (length section) - 1]
+>       (h, count') = if isHeader then
+>         let layout' = if isNothing maybeLayout then ""
+>                       else fromJust maybeLayout
+>         in ( [("header", header)]
+>            , (if layout' == "linear" then tail else id) count)
+>         else
+>           ([("header", header)], count)
 >   source <- sources $ dirOrFiles opts
 >   html <- hyakkoTemplate opts $ concat
 >     [ [("title", title)]
->     , if isHeader then [("header", header)] else []
+>     , h
 >     , cssTemplate opts
 >     , multiTemplate $ length source
 >     , sourceTemplate opts source
->     , sectionTemplate section maybeLayout [0 .. (length section) - 1]
+>     , sectionTemplate section maybeLayout count'
 >     ]
 >   putStrLn $ "hyakko: " ++ src ++ " -> " ++ dest
 >   T.writeFile dest html
