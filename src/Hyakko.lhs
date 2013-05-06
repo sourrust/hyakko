@@ -1,3 +1,6 @@
+Hyakko
+======
+
 **Hyakko** is a Haskell port of [docco](http://jashkenas.github.com/docco/):
 the original quick-and-dirty, hundred-line-line, literate-programming-style
 documentation generator. It produces HTML that displays your comments
@@ -258,24 +261,46 @@ Produces a list of table rows that split up code and documentation
     </tr>
 
 > sectionTemplate :: [Map String Text]
+>                 -> Maybe String
 >                 -> [Int]
 >                 -> [(String, String)]
-> sectionTemplate section = map sections
->   where sections x =
+> sectionTemplate section layoutType count =
+>   let isLayout = not $ isNothing layoutType
+>       sections = if isLayout then layoutFn $ fromJust layoutType
+>                  else undefined
+>   in map sections count
+>   where layoutFn "parallel" = parallel
+>         layoutFn "linear"   = linear
+>         layoutFn _          = undefined
+>         parallel x =
 >           let x'   = x + 1
 >               sect = section !! x
+>               docsHtml = T.unpack $ sect M.! "docsHtml"
+>               codeHtml = T.unpack $ sect M.! "codeHtml"
+>               codeText = T.unpack $ sect M.! "codeText"
+>               header   = docsHtml =~ L.pack "^\\s*<(h\\d)"
+>               isBlank  = T.null $ replace "\\s" (T.pack codeText) ""
 >           in ("section", concat
->              [ "<tr id=\"section-"
->              ,  show x'
->              ,  "\"><td class=\"docs\">"
->              , "<div class=\"pilwrap\">"
->              , "<a class=\"pilcrow\" href=\"#section-"
+>              [ "<li id=\"section-"
+>              , show x'
+>              , "\"><div class=\"annotation\">"
+>              , "<div class=\"pilwrap"
+>              , if null header then "" else " for-" ++ tail header
+>              , "\"><a class=\"pilcrow\" href=\""
 >              , show x'
 >              , "\">&#955;</a></div>"
->              , T.unpack $ sect M.! "docsHtml"
->              , "</td><td class=\"code\">"
->              , T.unpack $ sect M.! "codeHtml"
->              , "</td></tr>"
+>              , docsHtml
+>              , "</div>"
+>              , if isBlank then "" else "<div class=\"content\">"
+>                  ++ codeHtml ++ "</div>"
+>              ])
+>         linear x =
+>           let sect   = section !! x
+>               codeText = T.unpack $ sect M.! "codeText"
+>               isText = not $ null codeText
+>           in ("section", concat
+>              [ T.unpack $ sect M.! "docsHtml"
+>              , if isText then T.unpack $ sect M.! "codeHtml" else []
 >              ])
 
 > cssTemplate :: Hyakko -> [(String, String)]
@@ -292,8 +317,11 @@ template found in `resources/hyakko.html`
 
 > generateHTML :: Hyakko -> FilePath -> [Map String Text] -> IO ()
 > generateHTML opts src section = do
->   let title  = takeFileName src
->       dest   = destination (output opts) src
+>   let title       = takeFileName src
+>       dest        = destination (output opts) src
+>       maybeLayout = layout opts
+>       header      = T.unpack $ (section !! 0) M.! "docsHtml"
+>       isHeader    = header =~ L.pack "^<(h\\d)"
 >   source <- sources $ dirOrFiles opts
 >   html <- hyakkoTemplate opts $ concat
 >     [ [("title", title)]
@@ -301,7 +329,7 @@ template found in `resources/hyakko.html`
 >     , cssTemplate opts
 >     , multiTemplate $ length source
 >     , sourceTemplate opts source
->     , sectionTemplate section [0 .. (length section) - 1]
+>     , sectionTemplate section maybeLayout [0 .. (length section) - 1]
 >     ]
 >   putStrLn $ "hyakko: " ++ src ++ " -> " ++ dest
 >   T.writeFile dest html
