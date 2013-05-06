@@ -20,6 +20,34 @@ data-files:
                   -- HTML template and CSS sytle
                   resources/hyakko.html
                   resources/hyakko.css
+                  resources/linear/hyakko.html
+                  resources/linear/hyakko.css
+                  resources/linear/public/images/gray.png
+                  resources/linear/public/stylesheets/normalize.css
+                  resources/linear/public/fonts/aller-bold.eot
+                  resources/linear/public/fonts/aller-bold.ttf
+                  resources/linear/public/fonts/aller-bold.woff
+                  resources/linear/public/fonts/aller-light.eot
+                  resources/linear/public/fonts/aller-light.ttf
+                  resources/linear/public/fonts/aller-light.woff
+                  resources/linear/public/fonts/fleurons.eot
+                  resources/linear/public/fonts/fleurons.ttf
+                  resources/linear/public/fonts/fleurons.woff
+                  resources/linear/public/fonts/novecento-bold.eot
+                  resources/linear/public/fonts/novecento-bold.ttf
+                  resources/linear/public/fonts/novecento-bold.woff
+                  resources/parallel/hyakko.html
+                  resources/parallel/hyakko.css
+                  resources/parallel/public/stylesheets/normalize.css
+                  resources/parallel/public/fonts/aller-bold.eot
+                  resources/parallel/public/fonts/aller-bold.ttf
+                  resources/parallel/public/fonts/aller-bold.woff
+                  resources/parallel/public/fonts/aller-light.eot
+                  resources/parallel/public/fonts/aller-light.ttf
+                  resources/parallel/public/fonts/aller-light.woff
+                  resources/parallel/public/fonts/novecento-bold.eot
+                  resources/parallel/public/fonts/novecento-bold.ttf
+                  resources/parallel/public/fonts/novecento-bold.woff
 extra-source-files:
                   src/Text/Markdown.hs
 

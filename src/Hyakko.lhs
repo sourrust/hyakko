@@ -1,3 +1,6 @@
+Hyakko
+======
+
 **Hyakko** is a Haskell port of [docco](http://jashkenas.github.com/docco/):
 the original quick-and-dirty, hundred-line-line, literate-programming-style
 documentation generator. It produces HTML that displays your comments
@@ -45,7 +48,7 @@ or
 > import Data.List (sort)
 > import Data.Maybe (fromJust, isNothing)
 > import Data.Version (showVersion)
-> import Control.Monad (filterM, (>=>), forM)
+> import Control.Monad (filterM, (>=>), forM, forM_, unless)
 > import qualified Text.Blaze.Html as B
 > import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
 > import qualified Text.Highlighting.Kate as K
@@ -56,13 +59,15 @@ or
 >                         , doesDirectoryExist
 >                         , doesFileExist
 >                         , createDirectoryIfMissing
+>                         , copyFile
 >                         )
 > import System.FilePath ( takeBaseName
 >                        , takeExtension
 >                        , takeFileName
 >                        , (</>)
+>                        , addTrailingPathSeparator
 >                        )
-> import Paths_hyakko (getDataFileName, version)
+> import Paths_hyakko (getDataFileName, version, getDataDir)
 
 Main Documentation Generation Functions
 ---------------------------------------
@@ -96,14 +101,21 @@ language, and merging them into an HTML template.
 >   where generate :: FilePath -> IO ()
 >         generate x = do
 >           code <- T.readFile x
->           let sections = parse (getLanguage x) code
+>           dataDir <- getDataDir
+>           let sections  = parse (getLanguage x) code
+>               opts'     = configHyakko opts
+>           unless (isNothing $ layout opts') $ do
+>             let layoutDir = fromJust $ layout opts'
+>             copyDirectory opts'$ dataDir </> "resources"
+>                                          </> layoutDir
+>                                          </> "public"
 >           if null sections then
 >             putStrLn $ "hyakko doesn't support the language extension "
 >                      ++ takeExtension x
 >             else do
 >               let highlighted = highlight x sections
->                   y      = mapSections sections highlighted
->               generateHTML opts x y
+>                   y           = mapSections sections highlighted
+>               generateHTML opts' x y
 
 Given a string of source code, parse out each comment and the code that
 follows it, and create an individual **section** for it. Sections take the
@@ -250,25 +262,55 @@ Produces a list of table rows that split up code and documentation
     </tr>
 
 > sectionTemplate :: [Map String Text]
+>                 -> Maybe String
 >                 -> [Int]
 >                 -> [(String, String)]
-> sectionTemplate section = map sections
->   where sections x =
+> sectionTemplate section layoutType count =
+>   let isLayout = not $ isNothing layoutType
+>       sections = if isLayout then layoutFn $ fromJust layoutType
+>                  else undefined
+>   in map sections count
+>   where layoutFn "parallel" = parallel
+>         layoutFn "linear"   = linear
+>         layoutFn _          = undefined
+>         parallel x =
 >           let x'   = x + 1
 >               sect = section !! x
+>               docsHtml = T.unpack $ sect M.! "docsHtml"
+>               codeHtml = T.unpack $ sect M.! "codeHtml"
+>               codeText = T.unpack $ sect M.! "codeText"
+>               header   = docsHtml =~ L.pack "^\\s*<(h\\d)"
+>               isBlank  = T.null $ replace "\\s" (T.pack codeText) ""
 >           in ("section", concat
->              [ "<tr id=\"section-"
->              ,  show x'
->              ,  "\"><td class=\"docs\">"
->              , "<div class=\"pilwrap\">"
->              , "<a class=\"pilcrow\" href=\"#section-"
+>              [ "<li id=\"section-"
+>              , show x'
+>              , "\"><div class=\"annotation\">"
+>              , "<div class=\"pilwrap"
+>              , if null header then "" else " for-" ++ tail header
+>              , "\"><a class=\"pilcrow\" href=\""
 >              , show x'
 >              , "\">&#955;</a></div>"
->              , T.unpack $ sect M.! "docsHtml"
->              , "</td><td class=\"code\">"
->              , T.unpack $ sect M.! "codeHtml"
->              , "</td></tr>"
+>              , docsHtml
+>              , "</div>"
+>              , if isBlank then "" else "<div class=\"content\">"
+>                  ++ codeHtml ++ "</div>"
 >              ])
+>         linear x =
+>           let sect   = section !! x
+>               codeText = T.unpack $ sect M.! "codeText"
+>               isText = not $ null codeText
+>           in ("section", concat
+>              [ T.unpack $ sect M.! "docsHtml"
+>              , if isText then T.unpack $ sect M.! "codeHtml" else []
+>              ])
+
+> cssTemplate :: Hyakko -> [(String, String)]
+> cssTemplate opts =
+>   let maybeLayout = layout opts
+>       normalize   = "public" </> "stylesheets" </> "normalize.css"
+>       otherFile   = if isNothing maybeLayout then ([] ++) else
+>         (["resources" </> fromJust maybeLayout </> normalize] ++)
+>   in zip ["css", "css"] $ otherFile ["hyakko.css"]
 
 Once all of the code is finished highlighting, we can generate the HTML file
 and write out the documentation. Pass the completed sections into the
@@ -276,14 +318,27 @@ template found in `resources/hyakko.html`
 
 > generateHTML :: Hyakko -> FilePath -> [Map String Text] -> IO ()
 > generateHTML opts src section = do
->   let title  = takeFileName src
->       dest   = destination (output opts) src
+>   let title       = takeFileName src
+>       dest        = destination (output opts) src
+>       maybeLayout = layout opts
+>       header      = T.unpack $ (section !! 0) M.! "docsHtml"
+>       isHeader    = header =~ L.pack "^<(h\\d)"
+>       count       = [0 .. (length section) - 1]
+>       (h, count') = if isHeader then
+>         let layout' = if isNothing maybeLayout then ""
+>                       else fromJust maybeLayout
+>         in ( [("header", header)]
+>            , (if layout' == "linear" then tail else id) count)
+>         else
+>           ([("header", header)], count)
 >   source <- sources $ dirOrFiles opts
->   html <- hyakkoTemplate (template opts) $ concat
+>   html <- hyakkoTemplate opts $ concat
 >     [ [("title", title)]
+>     , h
+>     , cssTemplate opts
 >     , multiTemplate $ length source
 >     , sourceTemplate opts source
->     , sectionTemplate section [0 .. (length section) - 1]
+>     , sectionTemplate section maybeLayout count'
 >     ]
 >   putStrLn $ "hyakko: " ++ src ++ " -> " ++ dest
 >   T.writeFile dest html
@@ -336,21 +391,31 @@ source is `lib/example.hs`, the HTML will be at docs/example.html
 > destination :: FilePath -> FilePath -> FilePath
 > destination out fp = out </> (takeBaseName fp) ++ ".html"
 
+The function `hyakkoFile`, used to grab the contents of either the default
+css and html or a custom css and html. Then move it to the output directory.
+
+> hyakkoFile :: String -> Hyakko -> IO Text
+> hyakkoFile filetype opts = do
+>   let maybeFile = (if filetype == "css" then css else template) opts
+>   if isNothing maybeFile then
+>     readDataFile $ "resources"
+>                </> (fromJust $ layout opts)
+>                </> "hyakko." ++ filetype
+>     else
+>       T.readFile $ fromJust maybeFile
+
+
 Create the template that we will use to generate the Hyakko HTML page.
 
-> hyakkoTemplate :: Maybe FilePath -> [(String, String)] -> IO Text
-> hyakkoTemplate maybeFile var = do
->   content <- if isNothing maybeFile then
->                readDataFile "resources/hyakko.html"
->                else
->                  T.readFile $ fromJust maybeFile
+> hyakkoTemplate :: Hyakko -> [(String, String)] -> IO Text
+> hyakkoTemplate opts var = do
+>   content <- hyakkoFile "html" opts
 >   return . T.pack . renderTemplate var $ T.unpack content
 
 The CSS styles we'd like to apply to the documentation.
 
-> hyakkoStyles :: Maybe FilePath -> IO Text
-> hyakkoStyles Nothing    = readDataFile "resources/hyakko.css"
-> hyakkoStyles (Just file) = T.readFile file
+> hyakkoStyles :: Hyakko -> IO Text
+> hyakkoStyles = hyakkoFile "css"
 
 Reads from resource path given in cabal package
 
@@ -364,7 +429,7 @@ For each source file passed in as an argument, generate the documentation.
 >   files <- forM file $ \x -> do
 >     isDir <- doesDirectoryExist x
 >     if isDir then
->       unpackDirectories x
+>       unpackDirectories x >>= return . fst
 >       else
 >         return [x]
 >   return . sort $ concat files
@@ -372,15 +437,40 @@ For each source file passed in as an argument, generate the documentation.
 Turns the directory give into a list of files including all of the files in
 sub-directories.
 
-> unpackDirectories :: FilePath -> IO [FilePath]
+> unpackDirectories :: FilePath -> IO ([FilePath], [FilePath])
 > unpackDirectories d = do
->   let reg = "[^(^\\.{1,2}$)]" :: ByteString
+>   let reg = L.pack "[^(^\\.{1,2}$)]"
 >   content <- getDirectoryContents d >>= return . filter (=~ reg)
 >   let content' = map (d </>) content
 >   files <- filterM doesFileExist content'
 >   subdir <- filterM doesDirectoryExist content'
->   subcontent <- mapM unpackDirectories subdir >>= return . concat
->   return (files ++ subcontent)
+>   subcontent <- mapM unpackDirectories subdir >>= \x ->
+>     return (concatMap fst x, concatMap snd x)
+>   return (files ++ fst subcontent, subdir ++ snd subcontent)
+
+> copyDirectory :: Hyakko -> FilePath -> IO ()
+> copyDirectory opts dir = do
+>   (files, dirs) <- unpackDirectories dir
+>   dataDir       <- getDataDir
+>   let oldLocation = T.pack . addTrailingPathSeparator $ dataDir
+>                       </> "resources"
+>                       </> (fromJust $ layout opts)
+>       dirout      = output opts
+>   createDirectoryIfMissing False $ dirout </> "public"
+
+Create all the directories needed to put future files into.
+
+>   forM_ dirs $ \x -> do
+>     let x'   = T.pack x
+>         dir' = T.unpack $ T.replace oldLocation "" x'
+>     createDirectoryIfMissing False $ dirout </> dir'
+
+Copy all the files into the recently created directories.
+
+>   forM_ files $ \x -> do
+>     let x'   = T.pack x
+>         file = dirout </> (T.unpack $ T.replace oldLocation "" x')
+>     copyFile x file
 
 Configuration
 -------------
@@ -388,7 +478,8 @@ Configuration
 Data structure for command line argument parsing.
 
 > data Hyakko =
->   Hyakko { output     :: FilePath
+>   Hyakko { layout     :: Maybe String
+>          , output     :: FilePath
 >          , css        :: Maybe FilePath
 >          , template   :: Maybe FilePath
 >          , dirOrFiles :: [FilePath]
@@ -399,7 +490,9 @@ specifed, it will just use the ones in `defaultConfig`.
 
 > defaultConfig :: Hyakko
 > defaultConfig = Hyakko
->   { output     = "docs"  &= typDir
+>   { layout     = Just "parallel" &= typ "LAYOUT"
+>               &= help "choose a built-in layout (parallel, linear)"
+>   , output     = "docs"  &= typDir
 >               &= help "use a custom output path"
 >   , css        = Nothing &= typFile
 >               &= help "use a custom css file"
@@ -408,12 +501,25 @@ specifed, it will just use the ones in `defaultConfig`.
 >   , dirOrFiles = [] &= args &= typ "FILES/DIRS"
 >   } &= summary ("hyakko v" ++ showVersion version)
 
+**Configure** this particular run of hyakko. We might use a passed-in
+external template, or one of the built-in **layouts**.
+
+> configHyakko :: Hyakko -> Hyakko
+> configHyakko oldConfig =
+>   if isNothing $ template oldConfig then
+>     let dir    = "resources" </> (fromJust $ layout oldConfig)
+>     in oldConfig { template = Just $ dir </> "hyakko.html"
+>                  , css      = Just $ dir </> "hyakko.css"
+>                  }
+>     else
+>       oldConfig { layout = Nothing }
+
 Run the script.
 
 > main :: IO ()
 > main = do
 >   opts <- cmdArgs defaultConfig
->   style <- hyakkoStyles $ css opts
+>   style <- hyakkoStyles opts
 >   source <- sources $ dirOrFiles opts
 >   let dirout = output opts
 >   createDirectoryIfMissing False dirout
