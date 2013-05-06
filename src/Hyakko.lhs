@@ -134,6 +134,10 @@ line from the other documentation.
 >                     else
 >                       sectionOff c d zs
 
+The higher level interface for calling `inSections`. `parse` basically
+sanitates the file — turing literate into regular source and take out
+shebangs — then feed it to `inSections`, and finally return the results.
+
 > parse :: Maybe (Map String ByteString) -> Text -> [Map String Text]
 > parse Nothing _       = []
 > parse (Just src) code =
