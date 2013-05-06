@@ -207,9 +207,9 @@ Determine whether or not there is a `Jump to` section.
 > multiTemplate 1 = []
 > multiTemplate _ = [("multi", "1")]
 
-Produces a list of anchor tags to different files in docs
-
-    <a class="source" href="$href-link$">$file-name$</a>
+Produces a list of anchor tags to different files in docs. This will only
+show up if the template support it and there are more than one source file
+generated.
 
 > sourceTemplate :: Hyakko -> [FilePath] -> [(String, String)]
 > sourceTemplate opts = map source
