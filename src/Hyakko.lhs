@@ -175,9 +175,8 @@ datatype; otherwise it will return just the comment symbol.
 >                 insert True False _ = ("", False)
 >                 insert False _ y    = (y, True)
 
-Highlights a single chunk of Haskell code, using **Kate**, and runs the text
-of its corresponding comment through **Markdown**, using the Markdown
-translator in **[Pandoc](http://johnmacfarlane.net/pandoc/)**.
+Highlights the current file of code, using **Kate**, and outputs the the
+highlighted html to its caller.
 
 > highlight :: FilePath -> [Map String Text] -> [Text]
 > highlight src section =
