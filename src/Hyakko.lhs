@@ -48,7 +48,7 @@ or
 > import Data.List (sort)
 > import Data.Maybe (fromJust, isNothing)
 > import Data.Version (showVersion)
-> import Control.Monad (filterM, (>=>), forM, forM_)
+> import Control.Monad (filterM, (>=>), forM, forM_, unless)
 > import qualified Text.Blaze.Html as B
 > import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
 > import qualified Text.Highlighting.Kate as K
@@ -104,10 +104,11 @@ language, and merging them into an HTML template.
 >           dataDir <- getDataDir
 >           let sections  = parse (getLanguage x) code
 >               opts'     = configHyakko opts
->               layoutDir = fromJust $ layout opts'
->           copyDirectory opts' $ dataDir </> "resources"
->                                         </> layoutDir
->                                         </> "public"
+>           unless (isNothing $ layout opts') $ do
+>             let layoutDir = fromJust $ layout opts'
+>             copyDirectory opts'$ dataDir </> "resources"
+>                                          </> layoutDir
+>                                          </> "public"
 >           if null sections then
 >             putStrLn $ "hyakko doesn't support the language extension "
 >                      ++ takeExtension x
