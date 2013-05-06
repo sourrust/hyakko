@@ -287,7 +287,7 @@ template found in `resources/hyakko.html`
 >   let title  = takeFileName src
 >       dest   = destination (output opts) src
 >   source <- sources $ dirOrFiles opts
->   html <- hyakkoTemplate (template opts) $ concat
+>   html <- hyakkoTemplate opts $ concat
 >     [ [("title", title)]
 >     , multiTemplate $ length source
 >     , sourceTemplate opts source
@@ -344,21 +344,31 @@ source is `lib/example.hs`, the HTML will be at docs/example.html
 > destination :: FilePath -> FilePath -> FilePath
 > destination out fp = out </> (takeBaseName fp) ++ ".html"
 
+The function `hyakkoFile`, used to grab the contents of either the default
+css and html or a custom css and html. Then move it to the output directory.
+
+> hyakkoFile :: String -> Hyakko -> IO Text
+> hyakkoFile filetype opts = do
+>   let maybeFile = (if filetype == "css" then css else template) opts
+>   if isNothing maybeFile then
+>     readDataFile $ "resources"
+>                </> (fromJust $ layout opts)
+>                </> "hyakko." ++ filetype
+>     else
+>       T.readFile $ fromJust maybeFile
+
+
 Create the template that we will use to generate the Hyakko HTML page.
 
-> hyakkoTemplate :: Maybe FilePath -> [(String, String)] -> IO Text
-> hyakkoTemplate maybeFile var = do
->   content <- if isNothing maybeFile then
->                readDataFile "resources/hyakko.html"
->                else
->                  T.readFile $ fromJust maybeFile
+> hyakkoTemplate :: Hyakko -> [(String, String)] -> IO Text
+> hyakkoTemplate opts var = do
+>   content <- hyakkoFile "html" opts
 >   return . T.pack . renderTemplate var $ T.unpack content
 
 The CSS styles we'd like to apply to the documentation.
 
-> hyakkoStyles :: Maybe FilePath -> IO Text
-> hyakkoStyles Nothing    = readDataFile "resources/hyakko.css"
-> hyakkoStyles (Just file) = T.readFile file
+> hyakkoStyles :: Hyakko -> IO Text
+> hyakkoStyles = hyakkoFile "css"
 
 Reads from resource path given in cabal package
 
@@ -462,7 +472,7 @@ Run the script.
 > main :: IO ()
 > main = do
 >   opts <- cmdArgs defaultConfig
->   style <- hyakkoStyles $ css opts
+>   style <- hyakkoStyles opts
 >   source <- sources $ dirOrFiles opts
 >   let dirout = output opts
 >   createDirectoryIfMissing False dirout
