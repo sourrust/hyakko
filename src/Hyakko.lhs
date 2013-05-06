@@ -98,14 +98,15 @@ language, and merging them into an HTML template.
 >   where generate :: FilePath -> IO ()
 >         generate x = do
 >           code <- T.readFile x
->           let sections = parse (getLanguage x) code
+>           let sections  = parse (getLanguage x) code
+>               opts'     = configHyakko opts
 >           if null sections then
 >             putStrLn $ "hyakko doesn't support the language extension "
 >                      ++ takeExtension x
 >             else do
 >               let highlighted = highlight x sections
->                   y      = mapSections sections highlighted
->               generateHTML opts x y
+>                   y           = mapSections sections highlighted
+>               generateHTML opts' x y
 
 Given a string of source code, parse out each comment and the code that
 follows it, and create an individual **section** for it. Sections take the
@@ -437,6 +438,19 @@ specifed, it will just use the ones in `defaultConfig`.
 >               &= help "use a custom pandoc template"
 >   , dirOrFiles = [] &= args &= typ "FILES/DIRS"
 >   } &= summary ("hyakko v" ++ showVersion version)
+
+**Configure** this particular run of hyakko. We might use a passed-in
+external template, or one of the built-in **layouts**.
+
+> configHyakko :: Hyakko -> Hyakko
+> configHyakko oldConfig =
+>   if isNothing $ template oldConfig then
+>     let dir    = "resources" </> (fromJust $ layout oldConfig)
+>     in oldConfig { template = Just $ dir </> "hyakko.html"
+>                  , css      = Just $ dir </> "hyakko.css"
+>                  }
+>     else
+>       oldConfig { layout = Nothing }
 
 Run the script.
 
