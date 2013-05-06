@@ -308,8 +308,8 @@ Produces a list of table rows that split up code and documentation
 > cssTemplate opts =
 >   let maybeLayout = layout opts
 >       normalize   = "public" </> "stylesheets" </> "normalize.css"
->       otherFile   = if isNothing maybeLayout then ([] ++) else
->         (["resources" </> fromJust maybeLayout </> normalize] ++)
+>       otherFile   = if isNothing maybeLayout then id else
+>         ([normalize] ++)
 >   in zip ["css", "css"] $ otherFile ["hyakko.css"]
 
 Once all of the code is finished highlighting, we can generate the HTML file
