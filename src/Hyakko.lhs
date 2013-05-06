@@ -2,35 +2,31 @@ Hyakko
 ======
 
 **Hyakko** is a Haskell port of [docco](http://jashkenas.github.com/docco/):
-the original quick-and-dirty, hundred-line-line, literate-programming-style
-documentation generator. It produces HTML that displays your comments
-alongside your code. Comments are passed through
-[Markdown](http://daringfireball.net/projects/markdown/syntax) and code is
+the original quick-and-dirty documentation generate. It produces an HTML
+document that displays your comments intermingled with you code. All prose
+is passed through
+[Markdown](http://daringfireball.net/projects/markdown/syntax), and code is
 passed through [Kate](http://johnmacfarlane.net/highlighting-kate/) syntax
-highlighting. This page is the result of running Hyakko against its own
-source file.
+highlighing. This page is the result of running Hyakko against its own
+[source
+file](https://github.com/sourrust/hyakko/blob/master/src/Hyakko.lhs).
 
-If you install Hyakko, you can run it from the command-line:
+1. Install Hyakko with **cabal**: `cabal update; cabal install hyakko`
 
-    hyakko src/*.hs
+2. Run it agianst your code: `hyakko src/*.hs` or just `hyakko src` and
+   Hyakko will search for supported files inside the directory recursively.
 
-or just specify a directory and Hyakko will search for supported files
-inside the directory recursively.
+There is no "Step 3". This will generate an HTML page for each of the named
+source files, with a menu linking to the other pages, saving the whole mess
+into a `docs` folder — and is also configurable.
 
-Then it will generate linked HTML documentation for the named source files,
-saving it into a `docs` folder. The [source for
-Hyakko](https://github.com/sourrust/hyakko) available on GitHub.
+The [Hyakko source](https://github.com/sourrust/hyakko) is available on
+GitHub, and is released under the [MIT
+license](http://opensource.org/licenses/MIT).
 
-To install Hyakko
-
-    git clone git://github.com/sourrust/hyakko.git
-    cd hyakko
-    cabal install
-
-or
-
-    cabal update
-    cabal install hyakko
+The is a ["literate"
+style](http://www.haskell.org/haskellwiki/Literate_programming) of currently
+only literate Haskell, but can be supported fairly easily.
 
 > {-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
 
@@ -72,27 +68,10 @@ or
 Main Documentation Generation Functions
 ---------------------------------------
 
-Infix functions for easier concatenation with Text and ByteString.
-
-> (++.) :: Text -> Text -> Text
-> (++.) = T.append
-> {-# INLINE (++.) #-}
-
-> (++*) :: ByteString -> ByteString -> ByteString
-> (++*) = L.append
-> {-# INLINE (++*) #-}
-
-Simpler type signatuted regex replace function.
-
-> replace :: ByteString -> Text -> Text -> Text
-> replace reg x y =
->   let str  = T.unpack x
->       (_, _, rp) = str =~ reg :: (String, String, String)
->   in y ++. (T.pack rp)
-
-Generate the documentation for a source file by reading it in, splitting it
-up into comment/code sections, highlighting them for the appropriate
-language, and merging them into an HTML template.
+Generate the documentation for our configured source file by copyinh over
+static assets, reading all the source files in, splitting them up into
+prose+code sections, highlighting each file in the approapiate language, and
+printing them out in an HTML template.
 
 > generateDocumentation :: Hyakko -> [FilePath] -> IO ()
 > generateDocumentation _ [] =
@@ -117,20 +96,12 @@ language, and merging them into an HTML template.
 >                   y           = mapSections sections highlighted
 >               generateHTML opts' x y
 
-Given a string of source code, parse out each comment and the code that
-follows it, and create an individual **section** for it. Sections take the
-form:
+Given a string of source code, parse out eacg block of prose and the code
+that follows it — by detecting which is which, line by line — then create an
+individual **section** for it. Each section is Map with `docText` and
+`codeText` properties, and eventuall `docsHtml` and `codeHtml` as well.
 
-    [
-      ("docsText", ...),
-      ("docsHtml", ...),
-      ("codeText", ...),
-      ("codeHtml", ...)
-    ]
-
-> inSections :: [Text]
->            -> ByteString
->            -> [Map String Text]
+> inSections :: [Text] -> ByteString -> [Map String Text]
 > inSections xs r =
 >   let sections = sectionOff "" "" xs
 >   in map M.fromList sections
@@ -162,6 +133,10 @@ line from the other documentation.
 >                     ] : sectionOff "" "" zs
 >                     else
 >                       sectionOff c d zs
+
+The higher level interface for calling `inSections`. `parse` basically
+sanitates the file — turing literate into regular source and take out
+shebangs — then feed it to `inSections`, and finally return the results.
 
 > parse :: Maybe (Map String ByteString) -> Text -> [Map String Text]
 > parse Nothing _       = []
@@ -200,9 +175,8 @@ datatype; otherwise it will return just the comment symbol.
 >                 insert True False _ = ("", False)
 >                 insert False _ y    = (y, True)
 
-Highlights a single chunk of Haskell code, using **Kate**, and runs the text
-of its corresponding comment through **Markdown**, using the Markdown
-translator in **[Pandoc](http://johnmacfarlane.net/pandoc/)**.
+Highlights the current file of code, using **Kate**, and outputs the the
+highlighted html to its caller.
 
 > highlight :: FilePath -> [Map String Text] -> [Text]
 > highlight src section =
@@ -227,15 +201,15 @@ text into the corresponding keys of `docsHtml` and `codeHtml`.
 >                       M.insert "codeHtml" (codeText x) sect
 >   in map intoMap [0 .. sectLength]
 
-Determine whether or not there is a `Jump to` section
+Determine whether or not there is a `Jump to` section.
 
 > multiTemplate :: Int -> [(String, String)]
 > multiTemplate 1 = []
 > multiTemplate _ = [("multi", "1")]
 
-Produces a list of anchor tags to different files in docs
-
-    <a class="source" href="$href-link$">$file-name$</a>
+Produces a list of anchor tags to different files in docs. This will only
+show up if the template support it and there are more than one source file
+generated.
 
 > sourceTemplate :: Hyakko -> [FilePath] -> [(String, String)]
 > sourceTemplate opts = map source
@@ -247,19 +221,8 @@ Produces a list of anchor tags to different files in docs
 >           , "</a>"
 >           ])
 
-Produces a list of table rows that split up code and documentation
-
-    <tr id="section-$number$">
-      <td class="docs">
-        <div class="pilwrap">
-          <a class="pilcrow" href="#section-$number$">λ</a>
-        </div>
-        $doc-html$
-      </td>
-      <td class="code">
-        $code-html$
-      </td>
-    </tr>
+Depending on the layout type, `sectionTemplate` will produce the HTML that
+will be hooked into the templates layout theme.
 
 > sectionTemplate :: [Map String Text]
 >                 -> Maybe String
@@ -314,7 +277,8 @@ Produces a list of table rows that split up code and documentation
 
 Once all of the code is finished highlighting, we can generate the HTML file
 and write out the documentation. Pass the completed sections into the
-template found in `resources/hyakko.html`
+template found in `resources/linear/hyakko.html` or
+`resources/parallel/hyakko.html`.
 
 > generateHTML :: Hyakko -> FilePath -> [Map String Text] -> IO ()
 > generateHTML opts src section = do
@@ -345,6 +309,25 @@ template found in `resources/hyakko.html`
 
 Helpers & Setup
 ---------------
+
+Infix functions for easier concatenation with Text and ByteString.
+
+> (++.) :: Text -> Text -> Text
+> (++.) = T.append
+> {-# INLINE (++.) #-}
+
+> (++*) :: ByteString -> ByteString -> ByteString
+> (++*) = L.append
+> {-# INLINE (++*) #-}
+
+Simpler type signatuted regex replace function.
+
+> replace :: ByteString -> Text -> Text -> Text
+> replace reg x y =
+>   let str  = T.unpack x
+>       (_, _, rp) = str =~ reg :: (String, String, String)
+>   in y ++. (T.pack rp)
+
 
 A list of the languages that Hyakko supports, mapping the file extension to
 the name of the Pygments lexer and the symbol that indicates a comment. To
@@ -514,7 +497,8 @@ external template, or one of the built-in **layouts**.
 >     else
 >       oldConfig { layout = Nothing }
 
-Run the script.
+Finally, using [CmdArgs](http://community.haskell.org/~ndm/cmdargs/), define
+a command line interface. Parse options and hyakko does the rest.
 
 > main :: IO ()
 > main = do
