@@ -96,20 +96,12 @@ printing them out in an HTML template.
 >                   y           = mapSections sections highlighted
 >               generateHTML opts' x y
 
-Given a string of source code, parse out each comment and the code that
-follows it, and create an individual **section** for it. Sections take the
-form:
+Given a string of source code, parse out eacg block of prose and the code
+that follows it – by detecting which is which, line by line – then create an
+individual **section** for it. Each section is Map with `docText` and
+`codeText` properties, and eventuall `docsHtml` and `codeHtml` as well.
 
-    [
-      ("docsText", ...),
-      ("docsHtml", ...),
-      ("codeText", ...),
-      ("codeHtml", ...)
-    ]
-
-> inSections :: [Text]
->            -> ByteString
->            -> [Map String Text]
+> inSections :: [Text] -> ByteString -> [Map String Text]
 > inSections xs r =
 >   let sections = sectionOff "" "" xs
 >   in map M.fromList sections
