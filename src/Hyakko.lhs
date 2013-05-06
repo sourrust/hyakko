@@ -98,8 +98,13 @@ language, and merging them into an HTML template.
 >   where generate :: FilePath -> IO ()
 >         generate x = do
 >           code <- T.readFile x
+>           dataDir <- getDataDir
 >           let sections  = parse (getLanguage x) code
 >               opts'     = configHyakko opts
+>               layoutDir = fromJust $ layout opts'
+>           copyDirectory opts' $ dataDir </> "resources"
+>                                         </> layoutDir
+>                                         </> "public"
 >           if null sections then
 >             putStrLn $ "hyakko doesn't support the language extension "
 >                      ++ takeExtension x
