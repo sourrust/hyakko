@@ -72,24 +72,6 @@ or
 Main Documentation Generation Functions
 ---------------------------------------
 
-Infix functions for easier concatenation with Text and ByteString.
-
-> (++.) :: Text -> Text -> Text
-> (++.) = T.append
-> {-# INLINE (++.) #-}
-
-> (++*) :: ByteString -> ByteString -> ByteString
-> (++*) = L.append
-> {-# INLINE (++*) #-}
-
-Simpler type signatuted regex replace function.
-
-> replace :: ByteString -> Text -> Text -> Text
-> replace reg x y =
->   let str  = T.unpack x
->       (_, _, rp) = str =~ reg :: (String, String, String)
->   in y ++. (T.pack rp)
-
 Generate the documentation for a source file by reading it in, splitting it
 up into comment/code sections, highlighting them for the appropriate
 language, and merging them into an HTML template.
@@ -345,6 +327,25 @@ template found in `resources/hyakko.html`
 
 Helpers & Setup
 ---------------
+
+Infix functions for easier concatenation with Text and ByteString.
+
+> (++.) :: Text -> Text -> Text
+> (++.) = T.append
+> {-# INLINE (++.) #-}
+
+> (++*) :: ByteString -> ByteString -> ByteString
+> (++*) = L.append
+> {-# INLINE (++*) #-}
+
+Simpler type signatuted regex replace function.
+
+> replace :: ByteString -> Text -> Text -> Text
+> replace reg x y =
+>   let str  = T.unpack x
+>       (_, _, rp) = str =~ reg :: (String, String, String)
+>   in y ++. (T.pack rp)
+
 
 A list of the languages that Hyakko supports, mapping the file extension to
 the name of the Pygments lexer and the symbol that indicates a comment. To
