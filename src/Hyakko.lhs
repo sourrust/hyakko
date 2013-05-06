@@ -277,7 +277,8 @@ will be hooked into the templates layout theme.
 
 Once all of the code is finished highlighting, we can generate the HTML file
 and write out the documentation. Pass the completed sections into the
-template found in `resources/hyakko.html`
+template found in `resources/linear/hyakko.html` or
+`resources/parallel/hyakko.html`.
 
 > generateHTML :: Hyakko -> FilePath -> [Map String Text] -> IO ()
 > generateHTML opts src section = do
