@@ -497,7 +497,8 @@ external template, or one of the built-in **layouts**.
 >     else
 >       oldConfig { layout = Nothing }
 
-Run the script.
+Finally, using [CmdArgs](http://community.haskell.org/~ndm/cmdargs/), define
+a command line interface. Parse options and hyakko does the rest.
 
 > main :: IO ()
 > main = do
