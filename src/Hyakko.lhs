@@ -2,35 +2,31 @@ Hyakko
 ======
 
 **Hyakko** is a Haskell port of [docco](http://jashkenas.github.com/docco/):
-the original quick-and-dirty, hundred-line-line, literate-programming-style
-documentation generator. It produces HTML that displays your comments
-alongside your code. Comments are passed through
-[Markdown](http://daringfireball.net/projects/markdown/syntax) and code is
+the original quick-and-dirty documentation generate. It produces an HTML
+document that displays your comments intermingled with you code. All prose
+is passed through
+[Markdown](http://daringfireball.net/projects/markdown/syntax), and code is
 passed through [Kate](http://johnmacfarlane.net/highlighting-kate/) syntax
-highlighting. This page is the result of running Hyakko against its own
-source file.
+highlighing. This page is the result of running Hyakko against its own
+[source
+file](https://github.com/sourrust/hyakko/blob/master/src/Hyakko.lhs).
 
-If you install Hyakko, you can run it from the command-line:
+1. Install Hyakko with **cabal**: `cabal update; cabal install hyakko`
 
-    hyakko src/*.hs
+2. Run it agianst your code: `hyakko src/*.hs` or just `hyakko src` and
+   Hyakko will search for supported files inside the directory recursively.
 
-or just specify a directory and Hyakko will search for supported files
-inside the directory recursively.
+There is no "Step 3". This will generate an HTML page for each of the named
+source files, with a menu linking to the other pages, saving the whole mess
+into a `docs` folder — and is also configurable.
 
-Then it will generate linked HTML documentation for the named source files,
-saving it into a `docs` folder. The [source for
-Hyakko](https://github.com/sourrust/hyakko) available on GitHub.
+The [Hyakko source](https://github.com/sourrust/hyakko) is available on
+GitHub, and is released under the [MIT
+license](http://opensource.org/licenses/MIT).
 
-To install Hyakko
-
-    git clone git://github.com/sourrust/hyakko.git
-    cd hyakko
-    cabal install
-
-or
-
-    cabal update
-    cabal install hyakko
+The is a ["literate"
+style](http://www.haskell.org/haskellwiki/Literate_programming) of currently
+only literate Haskell, but can be supported fairly easily.
 
 > {-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
 
