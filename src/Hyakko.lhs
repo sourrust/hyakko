@@ -221,19 +221,8 @@ generated.
 >           , "</a>"
 >           ])
 
-Produces a list of table rows that split up code and documentation
-
-    <tr id="section-$number$">
-      <td class="docs">
-        <div class="pilwrap">
-          <a class="pilcrow" href="#section-$number$">λ</a>
-        </div>
-        $doc-html$
-      </td>
-      <td class="code">
-        $code-html$
-      </td>
-    </tr>
+Depending on the layout type, `sectionTemplate` will produce the HTML that
+will be hooked into the templates layout theme.
 
 > sectionTemplate :: [Map String Text]
 >                 -> Maybe String
