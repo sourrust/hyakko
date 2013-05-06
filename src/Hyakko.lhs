@@ -415,7 +415,8 @@ Configuration
 Data structure for command line argument parsing.
 
 > data Hyakko =
->   Hyakko { output     :: FilePath
+>   Hyakko { layout     :: Maybe String
+>          , output     :: FilePath
 >          , css        :: Maybe FilePath
 >          , template   :: Maybe FilePath
 >          , dirOrFiles :: [FilePath]
@@ -426,7 +427,9 @@ specifed, it will just use the ones in `defaultConfig`.
 
 > defaultConfig :: Hyakko
 > defaultConfig = Hyakko
->   { output     = "docs"  &= typDir
+>   { layout     = Just "parallel" &= typ "LAYOUT"
+>               &= help "choose a built-in layout (parallel, linear)"
+>   , output     = "docs"  &= typDir
 >               &= help "use a custom output path"
 >   , css        = Nothing &= typFile
 >               &= help "use a custom css file"
