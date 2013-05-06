@@ -278,6 +278,14 @@ Produces a list of table rows that split up code and documentation
 >              , "</td></tr>"
 >              ])
 
+> cssTemplate :: Hyakko -> [(String, String)]
+> cssTemplate opts =
+>   let maybeLayout = layout opts
+>       normalize   = "public" </> "stylesheets" </> "normalize.css"
+>       otherFile   = if isNothing maybeLayout then ([] ++) else
+>         (["resources" </> fromJust maybeLayout </> normalize] ++)
+>   in zip ["css", "css"] $ otherFile ["hyakko.css"]
+
 Once all of the code is finished highlighting, we can generate the HTML file
 and write out the documentation. Pass the completed sections into the
 template found in `resources/hyakko.html`
@@ -289,6 +297,8 @@ template found in `resources/hyakko.html`
 >   source <- sources $ dirOrFiles opts
 >   html <- hyakkoTemplate opts $ concat
 >     [ [("title", title)]
+>     , if isHeader then [("header", header)] else []
+>     , cssTemplate opts
 >     , multiTemplate $ length source
 >     , sourceTemplate opts source
 >     , sectionTemplate section [0 .. (length section) - 1]
