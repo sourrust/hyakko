@@ -201,7 +201,7 @@ text into the corresponding keys of `docsHtml` and `codeHtml`.
 >                       M.insert "codeHtml" (codeText x) sect
 >   in map intoMap [0 .. sectLength]
 
-Determine whether or not there is a `Jump to` section
+Determine whether or not there is a `Jump to` section.
 
 > multiTemplate :: Int -> [(String, String)]
 > multiTemplate 1 = []
