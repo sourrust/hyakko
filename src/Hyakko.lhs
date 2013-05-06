@@ -97,7 +97,7 @@ printing them out in an HTML template.
 >               generateHTML opts' x y
 
 Given a string of source code, parse out eacg block of prose and the code
-that follows it – by detecting which is which, line by line – then create an
+that follows it — by detecting which is which, line by line — then create an
 individual **section** for it. Each section is Map with `docText` and
 `codeText` properties, and eventuall `docsHtml` and `codeHtml` as well.
 
