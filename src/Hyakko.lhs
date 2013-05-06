@@ -68,9 +68,10 @@ only literate Haskell, but can be supported fairly easily.
 Main Documentation Generation Functions
 ---------------------------------------
 
-Generate the documentation for a source file by reading it in, splitting it
-up into comment/code sections, highlighting them for the appropriate
-language, and merging them into an HTML template.
+Generate the documentation for our configured source file by copyinh over
+static assets, reading all the source files in, splitting them up into
+prose+code sections, highlighting each file in the approapiate language, and
+printing them out in an HTML template.
 
 > generateDocumentation :: Hyakko -> [FilePath] -> IO ()
 > generateDocumentation _ [] =
