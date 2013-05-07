@@ -24,9 +24,10 @@ The [Hyakko source](https://github.com/sourrust/hyakko) is available on
 GitHub, and is released under the [MIT
 license](http://opensource.org/licenses/MIT).
 
-The is a ["literate"
-style](http://www.haskell.org/haskellwiki/Literate_programming) of currently
-only literate Haskell, but can be supported fairly easily.
+There is a ["literate"
+style](http://www.haskell.org/haskellwiki/Literate_programming) of Haskell,
+only one supported at this time, but other literate styles can be added
+fairly easily.
 
 > {-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
 
