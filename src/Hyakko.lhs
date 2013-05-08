@@ -35,6 +35,7 @@ fairly easily.
 
 > import Text.Markdown
 
+> import Data.Aeson
 > import Data.HashMap.Strict (HashMap)
 > import qualified Data.HashMap.Strict as M
 > import Data.ByteString.Lazy.Char8 (ByteString)
@@ -45,6 +46,7 @@ fairly easily.
 > import Data.List (sort)
 > import Data.Maybe (fromJust, isNothing)
 > import Data.Version (showVersion)
+> import Control.Applicative ((<$>), (<*>), empty)
 > import Control.Monad (filterM, (>=>), forM, forM_, unless)
 > import qualified Text.Blaze.Html as B
 > import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
@@ -58,6 +60,7 @@ fairly easily.
 >                         , createDirectoryIfMissing
 >                         , copyFile
 >                         )
+> import System.IO.Unsafe (unsafePerformIO)
 > import System.FilePath ( takeBaseName
 >                        , takeExtension
 >                        , takeFileName
@@ -315,9 +318,28 @@ The `Sections` type is just an alias to keep type signatures short.
 
 > type Sections = [HashMap String Text]
 
-Type `Languages` is also just an alias for type signature shortening.
+Alias `Languages`, for the multiple different languages inside the
+`languages.json` file.
 
-> type Languages = HashMap String ByteString
+> type Languages = HashMap String Language
+
+Better data type for language info — compared to the `Object` data type in
+`Aeson`.
+
+> data Language =
+>   Language { name_     :: ByteString
+>            , symbol    :: ByteString
+>            , literate  :: Maybe Bool
+>            , litSymbol :: Maybe ByteString
+>            }
+
+> instance FromJSON Language where
+>   parseJSON (Object o) = Language
+>                      <$> o .:  "name"
+>                      <*> o .:  "symbol"
+>                      <*> o .:? "literate"
+>                      <*> o .:? "litSymbol"
+>   parseJSON _          = empty
 
 Infix functions for easier concatenation with Text and ByteString.
 
@@ -337,44 +359,23 @@ Simpler type signatuted regex replace function.
 >       (_, _, rp) = str =~ reg :: (String, String, String)
 >   in y ++. (T.pack rp)
 
+> readLanguageFile :: IO ByteString
+> readLanguageFile = getDataFileName "resources/languages.json"
+>                >>= L.readFile
 
 A list of the languages that Hyakko supports, mapping the file extension to
 the name of the Pygments lexer and the symbol that indicates a comment. To
 add another language to Hyakko's repertoire, add it here.
 
-> languages :: HashMap String Languages
+> languages :: Languages
 > languages =
->   let hashSymbol = ("symbol", "#")
->       language   = M.fromList [
->           (".hs", M.fromList [
->             ("name", "haskell"), ("symbol", "--")]),
->           (".lhs", M.fromList [
->             ("name", "haskell"), ("symbol", "--"),
->             ("literate", "True"), ("symbol2", ">")]),
->           (".coffee", M.fromList [
->             ("name", "coffee-script"), hashSymbol]),
->           (".js", M.fromList [
->             ("name", "javascript"), ("symbol", "//")]),
->           (".py", M.fromList [
->             ("name", "python"), hashSymbol]),
->           (".rb", M.fromList [
->             ("name", "ruby"), hashSymbol])
->           ]
-
-Does the line begin with a comment?
-
->       hasComments symbol = "^\\s*" ++* symbol ++*  "\\s?"
->       intoMap lang = M.insert "comment"
->                               (hasComments $ lang M.! "symbol")
->                               lang
-
-Build out the appropriate matchers and delimiters for each language.
-
->  in M.map intoMap language
+>   let content  = unsafePerformIO $ readLanguageFile
+>       jsonData = decode' content
+>   in fromJust jsonData
 
 Get the current language we're documenting, based on the extension.
 
-> getLanguage :: FilePath -> Maybe Languages
+> getLanguage :: FilePath -> Maybe Language
 > getLanguage src = M.lookup (takeExtension src) languages
 
 Compute the destination HTML path for an input source file path. If the
