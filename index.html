@@ -29,8 +29,9 @@
 
 <span class="kw">import</span> <span class="dt">Text.Markdown</span>
 
-<span class="kw">import</span> <span class="dt">Data.Map</span> (<span class="dt">Map</span>)
-<span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Data.Map</span> <span class="kw">as</span> <span class="dt">M</span>
+<span class="kw">import</span> <span class="dt">Data.Aeson</span>
+<span class="kw">import</span> <span class="dt">Data.HashMap.Strict</span> (<span class="dt">HashMap</span>)
+<span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Data.HashMap.Strict</span> <span class="kw">as</span> <span class="dt">M</span>
 <span class="kw">import</span> <span class="dt">Data.ByteString.Lazy.Char8</span> (<span class="dt">ByteString</span>)
 <span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Data.ByteString.Lazy.Char8</span> <span class="kw">as</span> <span class="dt">L</span>
 <span class="kw">import</span> <span class="dt">Data.Text</span> (<span class="dt">Text</span>)
@@ -39,6 +40,7 @@
 <span class="kw">import</span> <span class="dt">Data.List</span> (<span class="fu">sort</span>)
 <span class="kw">import</span> <span class="dt">Data.Maybe</span> (fromJust, isNothing)
 <span class="kw">import</span> <span class="dt">Data.Version</span> (showVersion)
+<span class="kw">import</span> <span class="dt">Control.Applicative</span> ((<span class="fu">&lt;$&gt;</span>), (<span class="fu">&lt;*&gt;</span>), empty)
 <span class="kw">import</span> <span class="dt">Control.Monad</span> (filterM, (<span class="fu">&gt;=&gt;</span>), forM, forM_, unless)
 <span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Text.Blaze.Html</span> <span class="kw">as</span> <span class="dt">B</span>
 <span class="kw">import</span> <span class="dt">Text.Blaze.Html.Renderer.Utf8</span> (renderHtml)
@@ -52,6 +54,7 @@
                         , createDirectoryIfMissing
                         , copyFile
                         )
+<span class="kw">import</span> <span class="dt">System.IO.Unsafe</span> (unsafePerformIO)
 <span class="kw">import</span> <span class="dt">System.FilePath</span> ( takeBaseName
                        , takeExtension
                        , takeFileName
@@ -84,7 +87,7 @@ generateDocumentation opts xs <span class="fu">=</span> <span class="fu">mapM_</
                   y           <span class="fu">=</span> mapSections sections highlighted
               generateHTML opts&#39; x y
 </code></pre>
-<p>Given a string of source code, parse out eacg block of prose and the code that follows it — by detecting which is which, line by line — then create an individual <strong>section</strong> for it. Each section is Map with <code>docText</code> and <code>codeText</code> properties, and eventuall <code>docsHtml</code> and <code>codeHtml</code> as well.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">inSections ::</span> [<span class="dt">Text</span>] <span class="ot">-&gt;</span> <span class="dt">ByteString</span> <span class="ot">-&gt;</span> [<span class="dt">Map</span> <span class="dt">String</span> <span class="dt">Text</span>]
+<p>Given a string of source code, parse out eacg block of prose and the code that follows it — by detecting which is which, line by line — then create an individual <strong>section</strong> for it. Each section is Map with <code>docText</code> and <code>codeText</code> properties, and eventuall <code>docsHtml</code> and <code>codeHtml</code> as well.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">inSections ::</span> [<span class="dt">Text</span>] <span class="ot">-&gt;</span> <span class="dt">ByteString</span> <span class="ot">-&gt;</span> <span class="dt">Sections</span>
 inSections xs r <span class="fu">=</span>
   <span class="kw">let</span> sections <span class="fu">=</span> sectionOff <span class="st">&quot;&quot;</span> <span class="st">&quot;&quot;</span> xs
   <span class="kw">in</span> <span class="fu">map</span> M.fromList sections
@@ -114,20 +117,20 @@ inSections xs r <span class="fu">=</span>
                     <span class="kw">else</span>
                       sectionOff c d zs
 </code></pre>
-<p>The higher level interface for calling <code>inSections</code>. <code>parse</code> basically sanitates the file — turing literate into regular source and take out shebangs — then feed it to <code>inSections</code>, and finally return the results.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">parse ::</span> <span class="dt">Maybe</span> (<span class="dt">Map</span> <span class="dt">String</span> <span class="dt">ByteString</span>) <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> [<span class="dt">Map</span> <span class="dt">String</span> <span class="dt">Text</span>]
+<p>The higher level interface for calling <code>inSections</code>. <code>parse</code> basically sanitates the file — turing literate into regular source and take out shebangs — then feed it to <code>inSections</code>, and finally return the results.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">parse ::</span> <span class="dt">Maybe</span> <span class="dt">Language</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Sections</span>
 parse <span class="kw">Nothing</span> _       <span class="fu">=</span> []
 parse (<span class="kw">Just</span> src) code <span class="fu">=</span>
-  inSections (newlines line (M.lookup <span class="st">&quot;literate&quot;</span> src) <span class="kw">True</span>)
-             (src <span class="fu">M.!</span> <span class="st">&quot;comment&quot;</span>)
+  inSections (newlines line (literate src) <span class="kw">True</span>)
+             (<span class="st">&quot;^\\s*&quot;</span> <span class="fu">++*</span> symbol src <span class="fu">++*</span> <span class="st">&quot;\\s?&quot;</span>)
   <span class="kw">where</span><span class="ot"> line ::</span> [<span class="dt">Text</span>]
         line <span class="fu">=</span> <span class="fu">filter</span> ((<span class="fu">/=</span>) <span class="st">&quot;#!&quot;</span> <span class="fu">.</span> T.take <span class="dv">2</span>) <span class="fu">$</span> T.lines code
 </code></pre>
-<p>Transforms a literate style language file into its normal, non-literate style language. If it is normal, <code>newlines</code> for returns the same list of <code>Text</code> that was passed in.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">        newlines ::</span> [<span class="dt">Text</span>] <span class="ot">-&gt;</span> <span class="dt">Maybe</span> <span class="dt">ByteString</span> <span class="ot">-&gt;</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> [<span class="dt">Text</span>]
+<p>Transforms a literate style language file into its normal, non-literate style language. If it is normal, <code>newlines</code> for returns the same list of <code>Text</code> that was passed in.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">        newlines ::</span> [<span class="dt">Text</span>] <span class="ot">-&gt;</span> <span class="dt">Maybe</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> [<span class="dt">Text</span>]
         newlines [] _ _            <span class="fu">=</span> []
         newlines xs <span class="kw">Nothing</span> _      <span class="fu">=</span> xs
         newlines (x<span class="fu">:</span>xs) lit isText <span class="fu">=</span>
-          <span class="kw">let</span> s       <span class="fu">=</span> src <span class="fu">M.!</span> <span class="st">&quot;symbol&quot;</span>
-              r       <span class="fu">=</span> <span class="st">&quot;^&quot;</span> <span class="fu">++*</span> (src <span class="fu">M.!</span> <span class="st">&quot;symbol2&quot;</span>) <span class="fu">++*</span> <span class="st">&quot;\\s?&quot;</span>
+          <span class="kw">let</span> s       <span class="fu">=</span> symbol src
+              r       <span class="fu">=</span> <span class="st">&quot;^&quot;</span> <span class="fu">++*</span> (fromJust <span class="fu">$</span> litSymbol src) <span class="fu">++*</span> <span class="st">&quot;\\s?&quot;</span>
               r1      <span class="fu">=</span> L.pack <span class="st">&quot;^\\s*$&quot;</span>
               (x&#39;, y) <span class="fu">=</span> <span class="kw">if</span> T.unpack x <span class="fu">=~</span> r <span class="kw">then</span>
                      (replace r x <span class="st">&quot;&quot;</span>, <span class="kw">False</span>)
@@ -138,21 +141,21 @@ parse (<span class="kw">Just</span> src) code <span class="fu">=</span>
 </code></pre>
 <p>Inserts a comment symbol and a single space into the documentation line and check if the last line was code and documentation. If the previous line was code and the line is blank or has just whitespace, it returns a blank <code>Text</code> datatype; otherwise it will return just the comment symbol.</p><pre class="sourceCode"><code class="sourceCode">          <span class="kw">where</span><span class="ot"> insert ::</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> (<span class="dt">Text</span>, <span class="dt">Bool</span>)
                 insert <span class="kw">True</span> <span class="kw">True</span> _  <span class="fu">=</span> (T.pack <span class="fu">.</span> L.unpack
-                                        <span class="fu">$</span> src <span class="fu">M.!</span> <span class="st">&quot;symbol&quot;</span>, <span class="kw">True</span>)
+                                      <span class="fu">$</span> symbol src, <span class="kw">True</span>)
                 insert <span class="kw">True</span> <span class="kw">False</span> _ <span class="fu">=</span> (<span class="st">&quot;&quot;</span>, <span class="kw">False</span>)
                 insert <span class="kw">False</span> _ y    <span class="fu">=</span> (y, <span class="kw">True</span>)
 </code></pre>
-<p>Highlights the current file of code, using <strong>Kate</strong>, and outputs the the highlighted html to its caller.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">highlight ::</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> [<span class="dt">Map</span> <span class="dt">String</span> <span class="dt">Text</span>] <span class="ot">-&gt;</span> [<span class="dt">Text</span>]
+<p>Highlights the current file of code, using <strong>Kate</strong>, and outputs the the highlighted html to its caller.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">highlight ::</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="dt">Sections</span> <span class="ot">-&gt;</span> [<span class="dt">Text</span>]
 highlight src section <span class="fu">=</span>
   <span class="kw">let</span> language <span class="fu">=</span> fromJust <span class="fu">$</span> getLanguage src
-      langName <span class="fu">=</span> L.unpack <span class="fu">$</span> language <span class="fu">M.!</span> <span class="st">&quot;name&quot;</span>
+      langName <span class="fu">=</span> L.unpack <span class="fu">$</span> name_ language
       input    <span class="fu">=</span> <span class="fu">map</span> (\x <span class="ot">-&gt;</span> T.unpack <span class="fu">$</span> x <span class="fu">M.!</span> <span class="st">&quot;codeText&quot;</span>) section
       html     <span class="fu">=</span> B.toHtml <span class="fu">.</span> K.formatHtmlBlock K.defaultFormatOpts
                           <span class="fu">.</span> K.highlightAs langName
       htmlText <span class="fu">=</span> T.pack <span class="fu">.</span> L.unpack <span class="fu">.</span> renderHtml <span class="fu">.</span> html
   <span class="kw">in</span> <span class="fu">map</span> htmlText input
 </code></pre>
-<p><code>mapSections</code> is used to insert the html parts of the mapped sections of text into the corresponding keys of <code>docsHtml</code> and <code>codeHtml</code>.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">mapSections ::</span> [<span class="dt">Map</span> <span class="dt">String</span> <span class="dt">Text</span>] <span class="ot">-&gt;</span> [<span class="dt">Text</span>] <span class="ot">-&gt;</span> [<span class="dt">Map</span> <span class="dt">String</span> <span class="dt">Text</span>]
+<p><code>mapSections</code> is used to insert the html parts of the mapped sections of text into the corresponding keys of <code>docsHtml</code> and <code>codeHtml</code>.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">mapSections ::</span> <span class="dt">Sections</span> <span class="ot">-&gt;</span> [<span class="dt">Text</span>] <span class="ot">-&gt;</span> <span class="dt">Sections</span>
 mapSections section highlighted <span class="fu">=</span>
   <span class="kw">let</span> docText s  <span class="fu">=</span> toHTML <span class="fu">.</span> T.unpack <span class="fu">$</span> s <span class="fu">M.!</span> <span class="st">&quot;docsText&quot;</span>
       codeText i <span class="fu">=</span> highlighted <span class="fu">!!</span> i
@@ -176,7 +179,7 @@ sourceTemplate opts <span class="fu">=</span> <span class="fu">map</span> source
           , <span class="st">&quot;&lt;/a&gt;&quot;</span>
           ])
 </code></pre>
-<p>Depending on the layout type, <code>sectionTemplate</code> will produce the HTML that will be hooked into the templates layout theme.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">sectionTemplate ::</span> [<span class="dt">Map</span> <span class="dt">String</span> <span class="dt">Text</span>]
+<p>Depending on the layout type, <code>sectionTemplate</code> will produce the HTML that will be hooked into the templates layout theme.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">sectionTemplate ::</span> <span class="dt">Sections</span>
                 <span class="ot">-&gt;</span> <span class="dt">Maybe</span> <span class="dt">String</span>
                 <span class="ot">-&gt;</span> [<span class="dt">Int</span>]
                 <span class="ot">-&gt;</span> [(<span class="dt">String</span>, <span class="dt">String</span>)]
@@ -227,7 +230,7 @@ cssTemplate opts <span class="fu">=</span>
         ([normalize] <span class="fu">++</span>)
   <span class="kw">in</span> <span class="fu">zip</span> [<span class="st">&quot;css&quot;</span>, <span class="st">&quot;css&quot;</span>] <span class="fu">$</span> otherFile [<span class="st">&quot;hyakko.css&quot;</span>]
 </code></pre>
-<p>Once all of the code is finished highlighting, we can generate the HTML file and write out the documentation. Pass the completed sections into the template found in <code>resources/linear/hyakko.html</code> or <code>resources/parallel/hyakko.html</code>.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">generateHTML ::</span> <span class="dt">Hyakko</span> <span class="ot">-&gt;</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> [<span class="dt">Map</span> <span class="dt">String</span> <span class="dt">Text</span>] <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
+<p>Once all of the code is finished highlighting, we can generate the HTML file and write out the documentation. Pass the completed sections into the template found in <code>resources/linear/hyakko.html</code> or <code>resources/parallel/hyakko.html</code>.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">generateHTML ::</span> <span class="dt">Hyakko</span> <span class="ot">-&gt;</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="dt">Sections</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
 generateHTML opts src section <span class="fu">=</span> <span class="kw">do</span>
   <span class="kw">let</span> title       <span class="fu">=</span> takeFileName src
       dest        <span class="fu">=</span> destination (output opts) src
@@ -255,6 +258,25 @@ generateHTML opts src section <span class="fu">=</span> <span class="kw">do</spa
   T.writeFile dest html
 </code></pre>
 <h2 id="helpers-setup">Helpers &amp; Setup</h2>
+<p>The <code>Sections</code> type is just an alias to keep type signatures short.</p><pre class="sourceCode"><code class="sourceCode"><span class="kw">type</span> <span class="dt">Sections</span> <span class="fu">=</span> [<span class="dt">HashMap</span> <span class="dt">String</span> <span class="dt">Text</span>]
+</code></pre>
+<p>Alias <code>Languages</code>, for the multiple different languages inside the <code>languages.json</code> file.</p><pre class="sourceCode"><code class="sourceCode"><span class="kw">type</span> <span class="dt">Languages</span> <span class="fu">=</span> <span class="dt">HashMap</span> <span class="dt">String</span> <span class="dt">Language</span>
+</code></pre>
+<p>Better data type for language info — compared to the <code>Object</code> data type in <code>Aeson</code>.</p><pre class="sourceCode"><code class="sourceCode"><span class="kw">data</span> <span class="dt">Language</span> <span class="fu">=</span>
+  <span class="dt">Language</span> {<span class="ot"> name_     ::</span> <span class="dt">ByteString</span>
+           ,<span class="ot"> symbol    ::</span> <span class="dt">ByteString</span>
+           ,<span class="ot"> literate  ::</span> <span class="dt">Maybe</span> <span class="dt">Bool</span>
+           ,<span class="ot"> litSymbol ::</span> <span class="dt">Maybe</span> <span class="dt">ByteString</span>
+           }
+
+<span class="kw">instance</span> <span class="dt">FromJSON</span> <span class="dt">Language</span> <span class="kw">where</span>
+  parseJSON (<span class="dt">Object</span> o) <span class="fu">=</span> <span class="dt">Language</span>
+                     <span class="fu">&lt;$&gt;</span> o <span class="fu">.:</span>  <span class="st">&quot;name&quot;</span>
+                     <span class="fu">&lt;*&gt;</span> o <span class="fu">.:</span>  <span class="st">&quot;symbol&quot;</span>
+                     <span class="fu">&lt;*&gt;</span> o <span class="fu">.:?</span> <span class="st">&quot;literate&quot;</span>
+                     <span class="fu">&lt;*&gt;</span> o <span class="fu">.:?</span> <span class="st">&quot;litSymbol&quot;</span>
+  parseJSON _          <span class="fu">=</span> empty
+</code></pre>
 <p>Infix functions for easier concatenation with Text and ByteString.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">(++.) ::</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span>
 (<span class="fu">++.</span>) <span class="fu">=</span> T.append
 <span class="ot">{-# INLINE (++.) #-}</span>
@@ -269,34 +291,17 @@ replace reg x y <span class="fu">=</span>
       (_, _, rp) <span class="fu">=</span> str <span class="fu">=~</span><span class="ot"> reg ::</span> (<span class="dt">String</span>, <span class="dt">String</span>, <span class="dt">String</span>)
   <span class="kw">in</span> y <span class="fu">++.</span> (T.pack rp)
 
+<span class="ot">readLanguageFile ::</span> <span class="dt">IO</span> <span class="dt">ByteString</span>
+readLanguageFile <span class="fu">=</span> getDataFileName <span class="st">&quot;resources/languages.json&quot;</span>
+               <span class="fu">&gt;&gt;=</span> L.readFile
 </code></pre>
-<p>A list of the languages that Hyakko supports, mapping the file extension to the name of the Pygments lexer and the symbol that indicates a comment. To add another language to Hyakko's repertoire, add it here.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">languages ::</span> <span class="dt">Map</span> <span class="dt">String</span> (<span class="dt">Map</span> <span class="dt">String</span> <span class="dt">ByteString</span>)
+<p>A list of the languages that Hyakko supports, mapping the file extension to the name of the Pygments lexer and the symbol that indicates a comment. To add another language to Hyakko's repertoire, add it here.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">languages ::</span> <span class="dt">Languages</span>
 languages <span class="fu">=</span>
-  <span class="kw">let</span> hashSymbol <span class="fu">=</span> (<span class="st">&quot;symbol&quot;</span>, <span class="st">&quot;#&quot;</span>)
-      language   <span class="fu">=</span> M.fromList [
-          (<span class="st">&quot;.hs&quot;</span>, M.fromList [
-            (<span class="st">&quot;name&quot;</span>, <span class="st">&quot;haskell&quot;</span>), (<span class="st">&quot;symbol&quot;</span>, <span class="st">&quot;--&quot;</span>)]),
-          (<span class="st">&quot;.lhs&quot;</span>, M.fromList [
-            (<span class="st">&quot;name&quot;</span>, <span class="st">&quot;haskell&quot;</span>), (<span class="st">&quot;symbol&quot;</span>, <span class="st">&quot;--&quot;</span>),
-            (<span class="st">&quot;literate&quot;</span>, <span class="st">&quot;True&quot;</span>), (<span class="st">&quot;symbol2&quot;</span>, <span class="st">&quot;&gt;&quot;</span>)]),
-          (<span class="st">&quot;.coffee&quot;</span>, M.fromList [
-            (<span class="st">&quot;name&quot;</span>, <span class="st">&quot;coffee-script&quot;</span>), hashSymbol]),
-          (<span class="st">&quot;.js&quot;</span>, M.fromList [
-            (<span class="st">&quot;name&quot;</span>, <span class="st">&quot;javascript&quot;</span>), (<span class="st">&quot;symbol&quot;</span>, <span class="st">&quot;//&quot;</span>)]),
-          (<span class="st">&quot;.py&quot;</span>, M.fromList [
-            (<span class="st">&quot;name&quot;</span>, <span class="st">&quot;python&quot;</span>), hashSymbol]),
-          (<span class="st">&quot;.rb&quot;</span>, M.fromList [
-            (<span class="st">&quot;name&quot;</span>, <span class="st">&quot;ruby&quot;</span>), hashSymbol])
-          ]
+  <span class="kw">let</span> content  <span class="fu">=</span> unsafePerformIO <span class="fu">$</span> readLanguageFile
+      jsonData <span class="fu">=</span> decode&#39; content
+  <span class="kw">in</span> fromJust jsonData
 </code></pre>
-<p>Does the line begin with a comment?</p><pre class="sourceCode"><code class="sourceCode">      hasComments symbol <span class="fu">=</span> <span class="st">&quot;^\\s*&quot;</span> <span class="fu">++*</span> symbol <span class="fu">++*</span>  <span class="st">&quot;\\s?&quot;</span>
-      intoMap lang <span class="fu">=</span> M.insert <span class="st">&quot;comment&quot;</span>
-                              (hasComments <span class="fu">$</span> lang <span class="fu">M.!</span> <span class="st">&quot;symbol&quot;</span>)
-                              lang
-</code></pre>
-<p>Build out the appropriate matchers and delimiters for each language.</p><pre class="sourceCode"><code class="sourceCode"> <span class="kw">in</span> M.map intoMap language
-</code></pre>
-<p>Get the current language we're documenting, based on the extension.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">getLanguage ::</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="dt">Maybe</span> (<span class="dt">Map</span> <span class="dt">String</span> <span class="dt">ByteString</span>)
+<p>Get the current language we're documenting, based on the extension.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">getLanguage ::</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="dt">Maybe</span> <span class="dt">Language</span>
 getLanguage src <span class="fu">=</span> M.lookup (takeExtension src) languages
 </code></pre>
 <p>Compute the destination HTML path for an input source file path. If the source is <code>lib/example.hs</code>, the HTML will be at docs/example.html</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">destination ::</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="fu">FilePath</span>
