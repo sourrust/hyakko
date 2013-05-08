@@ -102,7 +102,7 @@ that follows it — by detecting which is which, line by line — then create an
 individual **section** for it. Each section is Map with `docText` and
 `codeText` properties, and eventuall `docsHtml` and `codeHtml` as well.
 
-> inSections :: [Text] -> ByteString -> [HashMap String Text]
+> inSections :: [Text] -> ByteString -> Sections
 > inSections xs r =
 >   let sections = sectionOff "" "" xs
 >   in map M.fromList sections
@@ -139,9 +139,7 @@ The higher level interface for calling `inSections`. `parse` basically
 sanitates the file — turing literate into regular source and take out
 shebangs — then feed it to `inSections`, and finally return the results.
 
-> parse :: Maybe (HashMap String ByteString)
->       -> Text
->       -> [HashMap String Text]
+> parse :: Maybe (HashMap String ByteString) -> Text -> Sections
 > parse Nothing _       = []
 > parse (Just src) code =
 >   inSections (newlines line (M.lookup "literate" src) True)
@@ -181,7 +179,7 @@ datatype; otherwise it will return just the comment symbol.
 Highlights the current file of code, using **Kate**, and outputs the the
 highlighted html to its caller.
 
-> highlight :: FilePath -> [HashMap String Text] -> [Text]
+> highlight :: FilePath -> Sections -> [Text]
 > highlight src section =
 >   let language = fromJust $ getLanguage src
 >       langName = L.unpack $ language M.! "name"
@@ -194,7 +192,7 @@ highlighted html to its caller.
 `mapSections` is used to insert the html parts of the mapped sections of
 text into the corresponding keys of `docsHtml` and `codeHtml`.
 
-> mapSections :: [HashMap String Text] -> [Text] -> [HashMap String Text]
+> mapSections :: Sections -> [Text] -> Sections
 > mapSections section highlighted =
 >   let docText s  = toHTML . T.unpack $ s M.! "docsText"
 >       codeText i = highlighted !! i
@@ -227,7 +225,7 @@ generated.
 Depending on the layout type, `sectionTemplate` will produce the HTML that
 will be hooked into the templates layout theme.
 
-> sectionTemplate :: [HashMap String Text]
+> sectionTemplate :: Sections
 >                 -> Maybe String
 >                 -> [Int]
 >                 -> [(String, String)]
@@ -283,7 +281,7 @@ and write out the documentation. Pass the completed sections into the
 template found in `resources/linear/hyakko.html` or
 `resources/parallel/hyakko.html`.
 
-> generateHTML :: Hyakko -> FilePath -> [HashMap String Text] -> IO ()
+> generateHTML :: Hyakko -> FilePath -> Sections -> IO ()
 > generateHTML opts src section = do
 >   let title       = takeFileName src
 >       dest        = destination (output opts) src
@@ -312,6 +310,10 @@ template found in `resources/linear/hyakko.html` or
 
 Helpers & Setup
 ---------------
+
+The `Sections` type is just an alias to keep type signatures short.
+
+> type Sections = [HashMap String Text]
 
 Infix functions for easier concatenation with Text and ByteString.
 
