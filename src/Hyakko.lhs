@@ -142,11 +142,11 @@ The higher level interface for calling `inSections`. `parse` basically
 sanitates the file — turing literate into regular source and take out
 shebangs — then feed it to `inSections`, and finally return the results.
 
-> parse :: Maybe Languages -> Text -> Sections
+> parse :: Maybe Language -> Text -> Sections
 > parse Nothing _       = []
 > parse (Just src) code =
->   inSections (newlines line (M.lookup "literate" src) True)
->              (src M.! "comment")
+>   inSections (newlines line (literate src) True)
+>              ("^\\s*" ++* symbol src ++* "\\s?")
 >   where line :: [Text]
 >         line = filter ((/=) "#!" . T.take 2) $ T.lines code
 
@@ -154,12 +154,12 @@ Transforms a literate style language file into its normal, non-literate
 style language. If it is normal, `newlines` for returns the same list of
 `Text` that was passed in.
 
->         newlines :: [Text] -> Maybe ByteString -> Bool -> [Text]
+>         newlines :: [Text] -> Maybe Bool -> Bool -> [Text]
 >         newlines [] _ _            = []
 >         newlines xs Nothing _      = xs
 >         newlines (x:xs) lit isText =
->           let s       = src M.! "symbol"
->               r       = "^" ++* (src M.! "symbol2") ++* "\\s?"
+>           let s       = symbol src
+>               r       = "^" ++* (fromJust $ litSymbol src) ++* "\\s?"
 >               r1      = L.pack "^\\s*$"
 >               (x', y) = if T.unpack x =~ r then
 >                      (replace r x "", False)
@@ -175,7 +175,7 @@ datatype; otherwise it will return just the comment symbol.
 
 >           where insert :: Bool -> Bool -> Text -> (Text, Bool)
 >                 insert True True _  = (T.pack . L.unpack
->                                         $ src M.! "symbol", True)
+>                                       $ symbol src, True)
 >                 insert True False _ = ("", False)
 >                 insert False _ y    = (y, True)
 
@@ -185,7 +185,7 @@ highlighted html to its caller.
 > highlight :: FilePath -> Sections -> [Text]
 > highlight src section =
 >   let language = fromJust $ getLanguage src
->       langName = L.unpack $ language M.! "name"
+>       langName = L.unpack $ name_ language
 >       input    = map (\x -> T.unpack $ x M.! "codeText") section
 >       html     = B.toHtml . K.formatHtmlBlock K.defaultFormatOpts
 >                           . K.highlightAs langName
