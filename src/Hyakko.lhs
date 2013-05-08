@@ -35,8 +35,8 @@ fairly easily.
 
 > import Text.Markdown
 
-> import Data.Map (Map)
-> import qualified Data.Map as M
+> import Data.HashMap.Strict (HashMap)
+> import qualified Data.HashMap.Strict as M
 > import Data.ByteString.Lazy.Char8 (ByteString)
 > import qualified Data.ByteString.Lazy.Char8 as L
 > import Data.Text (Text)
@@ -102,7 +102,7 @@ that follows it — by detecting which is which, line by line — then create an
 individual **section** for it. Each section is Map with `docText` and
 `codeText` properties, and eventuall `docsHtml` and `codeHtml` as well.
 
-> inSections :: [Text] -> ByteString -> [Map String Text]
+> inSections :: [Text] -> ByteString -> [HashMap String Text]
 > inSections xs r =
 >   let sections = sectionOff "" "" xs
 >   in map M.fromList sections
@@ -139,7 +139,9 @@ The higher level interface for calling `inSections`. `parse` basically
 sanitates the file — turing literate into regular source and take out
 shebangs — then feed it to `inSections`, and finally return the results.
 
-> parse :: Maybe (Map String ByteString) -> Text -> [Map String Text]
+> parse :: Maybe (HashMap String ByteString)
+>       -> Text
+>       -> [HashMap String Text]
 > parse Nothing _       = []
 > parse (Just src) code =
 >   inSections (newlines line (M.lookup "literate" src) True)
@@ -179,7 +181,7 @@ datatype; otherwise it will return just the comment symbol.
 Highlights the current file of code, using **Kate**, and outputs the the
 highlighted html to its caller.
 
-> highlight :: FilePath -> [Map String Text] -> [Text]
+> highlight :: FilePath -> [HashMap String Text] -> [Text]
 > highlight src section =
 >   let language = fromJust $ getLanguage src
 >       langName = L.unpack $ language M.! "name"
@@ -192,7 +194,7 @@ highlighted html to its caller.
 `mapSections` is used to insert the html parts of the mapped sections of
 text into the corresponding keys of `docsHtml` and `codeHtml`.
 
-> mapSections :: [Map String Text] -> [Text] -> [Map String Text]
+> mapSections :: [HashMap String Text] -> [Text] -> [HashMap String Text]
 > mapSections section highlighted =
 >   let docText s  = toHTML . T.unpack $ s M.! "docsText"
 >       codeText i = highlighted !! i
@@ -225,7 +227,7 @@ generated.
 Depending on the layout type, `sectionTemplate` will produce the HTML that
 will be hooked into the templates layout theme.
 
-> sectionTemplate :: [Map String Text]
+> sectionTemplate :: [HashMap String Text]
 >                 -> Maybe String
 >                 -> [Int]
 >                 -> [(String, String)]
@@ -281,7 +283,7 @@ and write out the documentation. Pass the completed sections into the
 template found in `resources/linear/hyakko.html` or
 `resources/parallel/hyakko.html`.
 
-> generateHTML :: Hyakko -> FilePath -> [Map String Text] -> IO ()
+> generateHTML :: Hyakko -> FilePath -> [HashMap String Text] -> IO ()
 > generateHTML opts src section = do
 >   let title       = takeFileName src
 >       dest        = destination (output opts) src
@@ -334,7 +336,7 @@ A list of the languages that Hyakko supports, mapping the file extension to
 the name of the Pygments lexer and the symbol that indicates a comment. To
 add another language to Hyakko's repertoire, add it here.
 
-> languages :: Map String (Map String ByteString)
+> languages :: HashMap String (HashMap String ByteString)
 > languages =
 >   let hashSymbol = ("symbol", "#")
 >       language   = M.fromList [
@@ -366,7 +368,7 @@ Build out the appropriate matchers and delimiters for each language.
 
 Get the current language we're documenting, based on the extension.
 
-> getLanguage :: FilePath -> Maybe (Map String ByteString)
+> getLanguage :: FilePath -> Maybe (HashMap String ByteString)
 > getLanguage src = M.lookup (takeExtension src) languages
 
 Compute the destination HTML path for an input source file path. If the
