@@ -35,8 +35,9 @@ fairly easily.
 
 > import Text.Markdown
 
-> import Data.Map (Map)
-> import qualified Data.Map as M
+> import Data.Aeson
+> import Data.HashMap.Strict (HashMap)
+> import qualified Data.HashMap.Strict as M
 > import Data.ByteString.Lazy.Char8 (ByteString)
 > import qualified Data.ByteString.Lazy.Char8 as L
 > import Data.Text (Text)
@@ -45,6 +46,7 @@ fairly easily.
 > import Data.List (sort)
 > import Data.Maybe (fromJust, isNothing)
 > import Data.Version (showVersion)
+> import Control.Applicative ((<$>), (<*>), empty)
 > import Control.Monad (filterM, (>=>), forM, forM_, unless)
 > import qualified Text.Blaze.Html as B
 > import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
@@ -58,6 +60,7 @@ fairly easily.
 >                         , createDirectoryIfMissing
 >                         , copyFile
 >                         )
+> import System.IO.Unsafe (unsafePerformIO)
 > import System.FilePath ( takeBaseName
 >                        , takeExtension
 >                        , takeFileName
@@ -102,7 +105,7 @@ that follows it — by detecting which is which, line by line — then create an
 individual **section** for it. Each section is Map with `docText` and
 `codeText` properties, and eventuall `docsHtml` and `codeHtml` as well.
 
-> inSections :: [Text] -> ByteString -> [Map String Text]
+> inSections :: [Text] -> ByteString -> Sections
 > inSections xs r =
 >   let sections = sectionOff "" "" xs
 >   in map M.fromList sections
@@ -139,11 +142,11 @@ The higher level interface for calling `inSections`. `parse` basically
 sanitates the file — turing literate into regular source and take out
 shebangs — then feed it to `inSections`, and finally return the results.
 
-> parse :: Maybe (Map String ByteString) -> Text -> [Map String Text]
+> parse :: Maybe Language -> Text -> Sections
 > parse Nothing _       = []
 > parse (Just src) code =
->   inSections (newlines line (M.lookup "literate" src) True)
->              (src M.! "comment")
+>   inSections (newlines line (literate src) True)
+>              ("^\\s*" ++* symbol src ++* "\\s?")
 >   where line :: [Text]
 >         line = filter ((/=) "#!" . T.take 2) $ T.lines code
 
@@ -151,12 +154,12 @@ Transforms a literate style language file into its normal, non-literate
 style language. If it is normal, `newlines` for returns the same list of
 `Text` that was passed in.
 
->         newlines :: [Text] -> Maybe ByteString -> Bool -> [Text]
+>         newlines :: [Text] -> Maybe Bool -> Bool -> [Text]
 >         newlines [] _ _            = []
 >         newlines xs Nothing _      = xs
 >         newlines (x:xs) lit isText =
->           let s       = src M.! "symbol"
->               r       = "^" ++* (src M.! "symbol2") ++* "\\s?"
+>           let s       = symbol src
+>               r       = "^" ++* (fromJust $ litSymbol src) ++* "\\s?"
 >               r1      = L.pack "^\\s*$"
 >               (x', y) = if T.unpack x =~ r then
 >                      (replace r x "", False)
@@ -172,17 +175,17 @@ datatype; otherwise it will return just the comment symbol.
 
 >           where insert :: Bool -> Bool -> Text -> (Text, Bool)
 >                 insert True True _  = (T.pack . L.unpack
->                                         $ src M.! "symbol", True)
+>                                       $ symbol src, True)
 >                 insert True False _ = ("", False)
 >                 insert False _ y    = (y, True)
 
 Highlights the current file of code, using **Kate**, and outputs the the
 highlighted html to its caller.
 
-> highlight :: FilePath -> [Map String Text] -> [Text]
+> highlight :: FilePath -> Sections -> [Text]
 > highlight src section =
 >   let language = fromJust $ getLanguage src
->       langName = L.unpack $ language M.! "name"
+>       langName = L.unpack $ name_ language
 >       input    = map (\x -> T.unpack $ x M.! "codeText") section
 >       html     = B.toHtml . K.formatHtmlBlock K.defaultFormatOpts
 >                           . K.highlightAs langName
@@ -192,7 +195,7 @@ highlighted html to its caller.
 `mapSections` is used to insert the html parts of the mapped sections of
 text into the corresponding keys of `docsHtml` and `codeHtml`.
 
-> mapSections :: [Map String Text] -> [Text] -> [Map String Text]
+> mapSections :: Sections -> [Text] -> Sections
 > mapSections section highlighted =
 >   let docText s  = toHTML . T.unpack $ s M.! "docsText"
 >       codeText i = highlighted !! i
@@ -225,7 +228,7 @@ generated.
 Depending on the layout type, `sectionTemplate` will produce the HTML that
 will be hooked into the templates layout theme.
 
-> sectionTemplate :: [Map String Text]
+> sectionTemplate :: Sections
 >                 -> Maybe String
 >                 -> [Int]
 >                 -> [(String, String)]
@@ -281,7 +284,7 @@ and write out the documentation. Pass the completed sections into the
 template found in `resources/linear/hyakko.html` or
 `resources/parallel/hyakko.html`.
 
-> generateHTML :: Hyakko -> FilePath -> [Map String Text] -> IO ()
+> generateHTML :: Hyakko -> FilePath -> Sections -> IO ()
 > generateHTML opts src section = do
 >   let title       = takeFileName src
 >       dest        = destination (output opts) src
@@ -311,6 +314,33 @@ template found in `resources/linear/hyakko.html` or
 Helpers & Setup
 ---------------
 
+The `Sections` type is just an alias to keep type signatures short.
+
+> type Sections = [HashMap String Text]
+
+Alias `Languages`, for the multiple different languages inside the
+`languages.json` file.
+
+> type Languages = HashMap String Language
+
+Better data type for language info — compared to the `Object` data type in
+`Aeson`.
+
+> data Language =
+>   Language { name_     :: ByteString
+>            , symbol    :: ByteString
+>            , literate  :: Maybe Bool
+>            , litSymbol :: Maybe ByteString
+>            }
+
+> instance FromJSON Language where
+>   parseJSON (Object o) = Language
+>                      <$> o .:  "name"
+>                      <*> o .:  "symbol"
+>                      <*> o .:? "literate"
+>                      <*> o .:? "litSymbol"
+>   parseJSON _          = empty
+
 Infix functions for easier concatenation with Text and ByteString.
 
 > (++.) :: Text -> Text -> Text
@@ -329,44 +359,23 @@ Simpler type signatuted regex replace function.
 >       (_, _, rp) = str =~ reg :: (String, String, String)
 >   in y ++. (T.pack rp)
 
+> readLanguageFile :: IO ByteString
+> readLanguageFile = getDataFileName "resources/languages.json"
+>                >>= L.readFile
 
 A list of the languages that Hyakko supports, mapping the file extension to
 the name of the Pygments lexer and the symbol that indicates a comment. To
 add another language to Hyakko's repertoire, add it here.
 
-> languages :: Map String (Map String ByteString)
+> languages :: Languages
 > languages =
->   let hashSymbol = ("symbol", "#")
->       language   = M.fromList [
->           (".hs", M.fromList [
->             ("name", "haskell"), ("symbol", "--")]),
->           (".lhs", M.fromList [
->             ("name", "haskell"), ("symbol", "--"),
->             ("literate", "True"), ("symbol2", ">")]),
->           (".coffee", M.fromList [
->             ("name", "coffee-script"), hashSymbol]),
->           (".js", M.fromList [
->             ("name", "javascript"), ("symbol", "//")]),
->           (".py", M.fromList [
->             ("name", "python"), hashSymbol]),
->           (".rb", M.fromList [
->             ("name", "ruby"), hashSymbol])
->           ]
-
-Does the line begin with a comment?
-
->       hasComments symbol = "^\\s*" ++* symbol ++*  "\\s?"
->       intoMap lang = M.insert "comment"
->                               (hasComments $ lang M.! "symbol")
->                               lang
-
-Build out the appropriate matchers and delimiters for each language.
-
->  in M.map intoMap language
+>   let content  = unsafePerformIO $ readLanguageFile
+>       jsonData = decode' content
+>   in fromJust jsonData
 
 Get the current language we're documenting, based on the extension.
 
-> getLanguage :: FilePath -> Maybe (Map String ByteString)
+> getLanguage :: FilePath -> Maybe Language
 > getLanguage src = M.lookup (takeExtension src) languages
 
 Compute the destination HTML path for an input source file path. If the

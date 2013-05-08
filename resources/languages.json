@@ -1,0 +1,7 @@
+{ ".hs":     {"name": "haskell", "symbol": "--"}
+, ".lhs":    {"name": "haskell", "symbol": "--", "literate": true, "litSymbol": ">"}
+, ".coffee": {"name": "coffee", "symbol": "#"}
+, ".js":     {"name": "javascript", "symbol": "//"}
+, ".py":     {"name": "python", "symbol": "#"}
+, ".rb":     {"name": "ruby", "symbol": "#"}
+}
