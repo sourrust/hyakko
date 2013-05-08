@@ -139,7 +139,7 @@ The higher level interface for calling `inSections`. `parse` basically
 sanitates the file — turing literate into regular source and take out
 shebangs — then feed it to `inSections`, and finally return the results.
 
-> parse :: Maybe (HashMap String ByteString) -> Text -> Sections
+> parse :: Maybe Languages -> Text -> Sections
 > parse Nothing _       = []
 > parse (Just src) code =
 >   inSections (newlines line (M.lookup "literate" src) True)
@@ -315,6 +315,10 @@ The `Sections` type is just an alias to keep type signatures short.
 
 > type Sections = [HashMap String Text]
 
+Type `Languages` is also just an alias for type signature shortening.
+
+> type Languages = HashMap String ByteString
+
 Infix functions for easier concatenation with Text and ByteString.
 
 > (++.) :: Text -> Text -> Text
@@ -338,7 +342,7 @@ A list of the languages that Hyakko supports, mapping the file extension to
 the name of the Pygments lexer and the symbol that indicates a comment. To
 add another language to Hyakko's repertoire, add it here.
 
-> languages :: HashMap String (HashMap String ByteString)
+> languages :: HashMap String Languages
 > languages =
 >   let hashSymbol = ("symbol", "#")
 >       language   = M.fromList [
@@ -370,7 +374,7 @@ Build out the appropriate matchers and delimiters for each language.
 
 Get the current language we're documenting, based on the extension.
 
-> getLanguage :: FilePath -> Maybe (HashMap String ByteString)
+> getLanguage :: FilePath -> Maybe Languages
 > getLanguage src = M.lookup (takeExtension src) languages
 
 Compute the destination HTML path for an input source file path. If the
