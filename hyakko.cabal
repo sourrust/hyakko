@@ -17,6 +17,8 @@ description:      Hyakko is a Haskell port of Docco: the original
                   quick-and-dirty, hundred-line-long,
                   literate-programming-style documentation generator.
 data-files:
+                  -- language definition file
+                  resources/languages.json
                   -- linear layout files
                   resources/linear/hyakko.html
                   resources/linear/hyakko.css
