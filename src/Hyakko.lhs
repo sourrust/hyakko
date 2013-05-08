@@ -27,7 +27,8 @@ license](http://opensource.org/licenses/MIT).
 There is a ["literate"
 style](http://www.haskell.org/haskellwiki/Literate_programming) of Haskell,
 only one supported at this time, but other literate styles can be added
-fairly easily.
+fairly easily via a [separate languages
+file](https://github.com/sourrust/hyakko/blob/master/resources/languages.json).
 
 > {-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
 
