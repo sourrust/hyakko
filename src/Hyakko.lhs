@@ -302,7 +302,7 @@ template found in `resources/linear/hyakko.html` or
 >           ([("header", header)], count)
 >   source <- sources $ dirOrFiles opts
 >   html <- hyakkoTemplate opts $ concat
->     [ [("title", title)]
+>     [ [("title", if isHeader then getHeader header else title)]
 >     , h
 >     , cssTemplate opts
 >     , multiTemplate $ length source
@@ -311,6 +311,15 @@ template found in `resources/linear/hyakko.html` or
 >     ]
 >   putStrLn $ "hyakko: " ++ src ++ " -> " ++ dest
 >   T.writeFile dest html
+
+Small helper to yank out the header text from an html string, if there is a
+header at the top of the file.
+
+> getHeader :: String -> String
+> getHeader htmlheader =
+>   let reg            = L.pack ">(.+)</h1>"
+>       [(_:header:_)] = htmlheader =~ reg
+>   in header
 
 Helpers & Setup
 ---------------
