@@ -2,7 +2,7 @@
 
 <html>
 <head>
-  <title>Hyakko.lhs</title>
+  <title>Hyakko</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <link rel="stylesheet" media="all" href="public/stylesheets/normalize.css" />
       <link rel="stylesheet" media="all" href="hyakko.css" />
@@ -247,7 +247,7 @@ generateHTML opts src section <span class="fu">=</span> <span class="kw">do</spa
           ([(<span class="st">&quot;header&quot;</span>, header)], count)
   source <span class="ot">&lt;-</span> sources <span class="fu">$</span> dirOrFiles opts
   html <span class="ot">&lt;-</span> hyakkoTemplate opts <span class="fu">$</span> <span class="fu">concat</span>
-    [ [(<span class="st">&quot;title&quot;</span>, title)]
+    [ [(<span class="st">&quot;title&quot;</span>, <span class="kw">if</span> isHeader <span class="kw">then</span> getHeader header <span class="kw">else</span> title)]
     , h
     , cssTemplate opts
     , multiTemplate <span class="fu">$</span> <span class="fu">length</span> source
@@ -256,6 +256,12 @@ generateHTML opts src section <span class="fu">=</span> <span class="kw">do</spa
     ]
   <span class="fu">putStrLn</span> <span class="fu">$</span> <span class="st">&quot;hyakko: &quot;</span> <span class="fu">++</span> src <span class="fu">++</span> <span class="st">&quot; -&gt; &quot;</span> <span class="fu">++</span> dest
   T.writeFile dest html
+</code></pre>
+<p>Small helper to yank out the header text from an html string, if there is a header at the top of the file.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">getHeader ::</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">String</span>
+getHeader htmlheader <span class="fu">=</span>
+  <span class="kw">let</span> reg            <span class="fu">=</span> L.pack <span class="st">&quot;&gt;(.+)&lt;/h\\d&gt;&quot;</span>
+      [(_<span class="fu">:</span>header<span class="fu">:</span>_)] <span class="fu">=</span> htmlheader <span class="fu">=~</span> reg
+  <span class="kw">in</span> header
 </code></pre>
 <h2 id="helpers-setup">Helpers &amp; Setup</h2>
 <p>The <code>Sections</code> type is just an alias to keep type signatures short.</p><pre class="sourceCode"><code class="sourceCode"><span class="kw">type</span> <span class="dt">Sections</span> <span class="fu">=</span> [<span class="dt">HashMap</span> <span class="dt">String</span> <span class="dt">Text</span>]
