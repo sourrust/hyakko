@@ -312,6 +312,9 @@ template found in `resources/linear/hyakko.html` or
 >   putStrLn $ "hyakko: " ++ src ++ " -> " ++ dest
 >   T.writeFile dest html
 
+Small helper to yank out the header text from an html string, if there is a
+header at the top of the file.
+
 > getHeader :: String -> String
 > getHeader htmlheader =
 >   let reg            = L.pack ">(.+)</h1>"
