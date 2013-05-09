@@ -302,7 +302,7 @@ template found in `resources/linear/hyakko.html` or
 >           ([("header", header)], count)
 >   source <- sources $ dirOrFiles opts
 >   html <- hyakkoTemplate opts $ concat
->     [ [("title", title)]
+>     [ [("title", if isHeader then getHeader header else title)]
 >     , h
 >     , cssTemplate opts
 >     , multiTemplate $ length source
