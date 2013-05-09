@@ -317,7 +317,7 @@ header at the top of the file.
 
 > getHeader :: String -> String
 > getHeader htmlheader =
->   let reg            = L.pack ">(.+)</h1>"
+>   let reg            = L.pack ">(.+)</h\\d>"
 >       [(_:header:_)] = htmlheader =~ reg
 >   in header
 
