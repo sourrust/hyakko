@@ -312,6 +312,12 @@ template found in `resources/linear/hyakko.html` or
 >   putStrLn $ "hyakko: " ++ src ++ " -> " ++ dest
 >   T.writeFile dest html
 
+> getHeader :: String -> String
+> getHeader htmlheader =
+>   let reg            = L.pack ">(.+)</h1>"
+>       [(_:header:_)] = htmlheader =~ reg
+>   in header
+
 Helpers & Setup
 ---------------
 
