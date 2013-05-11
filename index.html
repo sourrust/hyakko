@@ -73,7 +73,7 @@ generateDocumentation opts xs <span class="fu">=</span> <span class="fu">mapM_</
           code <span class="ot">&lt;-</span> T.readFile x
           dataDir <span class="ot">&lt;-</span> getDataDir
           <span class="kw">let</span> sections  <span class="fu">=</span> parse (getLanguage x) code
-              opts&#39;     <span class="fu">=</span> configHyakko opts
+              opts&#39;     <span class="fu">=</span> configHyakko opts dataDir
           unless (isNothing <span class="fu">$</span> layout opts&#39;) <span class="fu">$</span> <span class="kw">do</span>
             <span class="kw">let</span> layoutDir <span class="fu">=</span> fromJust <span class="fu">$</span> layout opts&#39;
             copyDirectory opts&#39;<span class="fu">$</span> dataDir <span class="fu">&lt;/&gt;</span> <span class="st">&quot;resources&quot;</span>
@@ -398,10 +398,11 @@ defaultConfig <span class="fu">=</span> <span class="dt">Hyakko</span>
   , dirOrFiles <span class="fu">=</span> [] <span class="fu">&amp;=</span> args <span class="fu">&amp;=</span> typ <span class="st">&quot;FILES/DIRS&quot;</span>
   } <span class="fu">&amp;=</span> summary (<span class="st">&quot;hyakko v&quot;</span> <span class="fu">++</span> showVersion version)
 </code></pre>
-<p><strong>Configure</strong> this particular run of hyakko. We might use a passed-in external template, or one of the built-in <strong>layouts</strong>.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">configHyakko ::</span> <span class="dt">Hyakko</span> <span class="ot">-&gt;</span> <span class="dt">Hyakko</span>
-configHyakko oldConfig <span class="fu">=</span>
+<p><strong>Configure</strong> this particular run of hyakko. We might use a passed-in external template, or one of the built-in <strong>layouts</strong>.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">configHyakko ::</span> <span class="dt">Hyakko</span> <span class="ot">-&gt;</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="dt">Hyakko</span>
+configHyakko oldConfig datadir <span class="fu">=</span>
   <span class="kw">if</span> isNothing <span class="fu">$</span> template oldConfig <span class="kw">then</span>
-    <span class="kw">let</span> dir    <span class="fu">=</span> <span class="st">&quot;resources&quot;</span> <span class="fu">&lt;/&gt;</span> (fromJust <span class="fu">$</span> layout oldConfig)
+    <span class="kw">let</span> dir    <span class="fu">=</span> datadir <span class="fu">&lt;/&gt;</span> <span class="st">&quot;resources&quot;</span>
+                         <span class="fu">&lt;/&gt;</span> (fromJust <span class="fu">$</span> layout oldConfig)
     <span class="kw">in</span> oldConfig { template <span class="fu">=</span> <span class="kw">Just</span> <span class="fu">$</span> dir <span class="fu">&lt;/&gt;</span> <span class="st">&quot;hyakko.html&quot;</span>
                  , css      <span class="fu">=</span> <span class="kw">Just</span> <span class="fu">$</span> dir <span class="fu">&lt;/&gt;</span> <span class="st">&quot;hyakko.css&quot;</span>
                  }
