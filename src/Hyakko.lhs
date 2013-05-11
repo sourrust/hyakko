@@ -87,7 +87,7 @@ printing them out in an HTML template.
 >           code <- T.readFile x
 >           dataDir <- getDataDir
 >           let sections  = parse (getLanguage x) code
->               opts'     = configHyakko opts
+>               opts'     = configHyakko opts dataDir
 >           unless (isNothing $ layout opts') $ do
 >             let layoutDir = fromJust $ layout opts'
 >             copyDirectory opts'$ dataDir </> "resources"
@@ -507,10 +507,11 @@ specifed, it will just use the ones in `defaultConfig`.
 **Configure** this particular run of hyakko. We might use a passed-in
 external template, or one of the built-in **layouts**.
 
-> configHyakko :: Hyakko -> Hyakko
-> configHyakko oldConfig =
+> configHyakko :: Hyakko -> FilePath -> Hyakko
+> configHyakko oldConfig datadir =
 >   if isNothing $ template oldConfig then
->     let dir    = "resources" </> (fromJust $ layout oldConfig)
+>     let dir    = datadir </> "resources"
+>                          </> (fromJust $ layout oldConfig)
 >     in oldConfig { template = Just $ dir </> "hyakko.html"
 >                  , css      = Just $ dir </> "hyakko.css"
 >                  }
