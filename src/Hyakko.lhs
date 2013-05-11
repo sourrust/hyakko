@@ -87,7 +87,7 @@ printing them out in an HTML template.
 >           code <- T.readFile x
 >           dataDir <- getDataDir
 >           let sections  = parse (getLanguage x) code
->               opts'     = configHyakko opts
+>               opts'     = configHyakko opts dataDir
 >           unless (isNothing $ layout opts') $ do
 >             let layoutDir = fromJust $ layout opts'
 >             copyDirectory opts'$ dataDir </> "resources"
