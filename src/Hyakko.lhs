@@ -146,19 +146,19 @@ shebangs — then feed it to `inSections`, and finally return the results.
 > parse :: Maybe Language -> Text -> Sections
 > parse Nothing _       = []
 > parse (Just src) code =
->   inSections (newlines line (literate src) True)
+>   inSections (fromLiterate line (literate src) True)
 >              ("^\\s*" ++* symbol src ++* "\\s?")
 >   where line :: [Text]
 >         line = filter ((/=) "#!" . T.take 2) $ T.lines code
 
 Transforms a literate style language file into its normal, non-literate
-style language. If it is normal, `newlines` for returns the same list of
+style language. If it is normal, `fromLiterate` for returns the same list of
 `Text` that was passed in.
 
->         newlines :: [Text] -> Maybe Bool -> Bool -> [Text]
->         newlines [] _ _            = []
->         newlines xs Nothing _      = xs
->         newlines (x:xs) lit isText =
+>         fromLiterate :: [Text] -> Maybe Bool -> Bool -> [Text]
+>         fromLiterate [] _ _            = []
+>         fromLiterate xs Nothing _      = xs
+>         fromLiterate (x:xs) lit isText =
 >           let s       = symbol src
 >               r       = "^" ++* (fromJust $ litSymbol src) ++* "\\s?"
 >               r1      = L.pack "^\\s*$"
@@ -167,7 +167,7 @@ style language. If it is normal, `newlines` for returns the same list of
 >                      else
 >                        insert (T.unpack x =~ r1) isText
 >                          ((T.pack $ L.unpack s)  ++. " " ++. x)
->           in x': newlines xs lit y
+>           in x': fromLiterate xs lit y
 
 Inserts a comment symbol and a single space into the documentation line and
 check if the last line was code and documentation. If the previous line was
