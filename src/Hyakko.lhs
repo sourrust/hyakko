@@ -524,9 +524,6 @@ a command line interface. Parse options and hyakko does the rest.
 > main :: IO ()
 > main = do
 >   opts <- cmdArgs defaultConfig
->   style <- hyakkoStyles opts
 >   source <- sources $ dirOrFiles opts
->   let dirout = output opts
->   createDirectoryIfMissing False dirout
->   T.writeFile (dirout </> "hyakko.css") style
+>   createDirectoryIfMissing False $ output opts
 >   generateDocumentation opts source
