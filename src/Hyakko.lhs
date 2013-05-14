@@ -35,6 +35,7 @@ file](https://github.com/sourrust/hyakko/blob/master/resources/languages.json).
 > module Main where
 
 > import Hyakko.Text.Markdown
+> import Hyakko.Text.Templates
 > import Hyakko.Types
 
 > import Data.Aeson (decode')
