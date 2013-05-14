@@ -111,10 +111,13 @@ individual **section** for it. Each section is Map with `docText` and
 >   let sections = sectionOff "" "" xs
 >   in map M.fromList sections
 
->   where sectionOff :: Text -> Text -> [Text] -> [[(String, Text)]]
->         sectionOff code docs [] = [ ("codeText", code)
->                                   , ("docsText", docs)
->                                   ] : []
+>   where save :: Text -> Text -> [(String, Text)]
+>         save code docs = [ ("codeText", code)
+>                          , ("docsText", docs)
+>                          ]
+
+>         sectionOff :: Text -> Text -> [Text] -> [[(String, Text)]]
+>         sectionOff code docs [] = save code docs : []
 >         sectionOff code docs (y:ys) =
 >           if T.unpack y =~ r then
 >             handleDocs code
@@ -122,9 +125,8 @@ individual **section** for it. Each section is Map with `docText` and
 >               sectionOff (code ++. y ++. "\n") docs ys
 
 >           where handleDocs "" = handleHeaders code (newdocs docs) ys
->                 handleDocs _  = [ ("codeText", code)
->                                 , ("docsText", docs)
->                                 ] : handleHeaders "" (newdocs "") ys
+>                 handleDocs _  = save code docs
+>                               : handleHeaders "" (newdocs "") ys
 
 >                 newdocs d = d ++. (replace r y "") ++. "\n"
 
@@ -133,9 +135,7 @@ line from the other documentation.
 
 >                 handleHeaders c d zs =
 >                   if T.unpack d =~ L.pack "^(---|===)+" then
->                     [ ("codeText", c)
->                     , ("docsText", d)
->                     ] : sectionOff "" "" zs
+>                     save c d : sectionOff "" "" zs
 >                     else
 >                       sectionOff c d zs
 
