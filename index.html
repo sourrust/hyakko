@@ -23,14 +23,15 @@
 </ol>
 <p>There is no &quot;Step 3&quot;. This will generate an HTML page for each of the named source files, with a menu linking to the other pages, saving the whole mess into a <code>docs</code> folder — and is also configurable.</p>
 <p>The <a href="https://github.com/sourrust/hyakko">Hyakko source</a> is available on GitHub, and is released under the <a href="http://opensource.org/licenses/MIT">MIT license</a>.</p>
-<p>There is a <a href="http://www.haskell.org/haskellwiki/Literate_programming">&quot;literate&quot; style</a> of Haskell, only one supported at this time, but other literate styles can be added fairly easily via a <a href="https://github.com/sourrust/hyakko/blob/master/resources/languages.json">separate languages file</a>.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">{-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}</span>
+<p>There is a <a href="http://www.haskell.org/haskellwiki/Literate_programming">&quot;literate&quot; style</a> of Haskell, only one supported at this time, but other literate styles can be added fairly easily via a <a href="https://github.com/sourrust/hyakko/blob/master/resources/languages.json">separate languages file</a>.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">{-# LANGUAGE OverloadedStrings #-}</span>
 
 <span class="kw">module</span> <span class="dt">Main</span> <span class="kw">where</span>
 
-<span class="kw">import</span> <span class="dt">Text.Markdown</span>
+<span class="kw">import</span> <span class="dt">Hyakko.Text.Markdown</span>
+<span class="kw">import</span> <span class="dt">Hyakko.Text.Templates</span>
+<span class="kw">import</span> <span class="dt">Hyakko.Types</span>
 
-<span class="kw">import</span> <span class="dt">Data.Aeson</span>
-<span class="kw">import</span> <span class="dt">Data.HashMap.Strict</span> (<span class="dt">HashMap</span>)
+<span class="kw">import</span> <span class="dt">Data.Aeson</span> (decode&#39;)
 <span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Data.HashMap.Strict</span> <span class="kw">as</span> <span class="dt">M</span>
 <span class="kw">import</span> <span class="dt">Data.ByteString.Lazy.Char8</span> (<span class="dt">ByteString</span>)
 <span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Data.ByteString.Lazy.Char8</span> <span class="kw">as</span> <span class="dt">L</span>
@@ -40,7 +41,7 @@
 <span class="kw">import</span> <span class="dt">Data.List</span> (<span class="fu">sort</span>)
 <span class="kw">import</span> <span class="dt">Data.Maybe</span> (fromJust, isNothing)
 <span class="kw">import</span> <span class="dt">Data.Version</span> (showVersion)
-<span class="kw">import</span> <span class="dt">Control.Applicative</span> ((<span class="fu">&lt;$&gt;</span>), (<span class="fu">&lt;*&gt;</span>), empty)
+<span class="kw">import</span> <span class="dt">Control.Applicative</span> ((<span class="fu">&lt;$&gt;</span>))
 <span class="kw">import</span> <span class="dt">Control.Monad</span> (filterM, (<span class="fu">&gt;=&gt;</span>), forM, forM_, unless)
 <span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Text.Blaze.Html</span> <span class="kw">as</span> <span class="dt">B</span>
 <span class="kw">import</span> <span class="dt">Text.Blaze.Html.Renderer.Utf8</span> (renderHtml)
@@ -67,68 +68,69 @@
 <p>Generate the documentation for our configured source file by copyinh over static assets, reading all the source files in, splitting them up into prose+code sections, highlighting each file in the approapiate language, and printing them out in an HTML template.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">generateDocumentation ::</span> <span class="dt">Hyakko</span> <span class="ot">-&gt;</span> [<span class="fu">FilePath</span>] <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
 generateDocumentation _ [] <span class="fu">=</span>
   <span class="fu">putStrLn</span> <span class="st">&quot;hyakko: no files or options given (try --help)&quot;</span>
-generateDocumentation opts xs <span class="fu">=</span> <span class="fu">mapM_</span> generate xs
-  <span class="kw">where</span><span class="ot"> generate ::</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
-        generate x <span class="fu">=</span> <span class="kw">do</span>
-          code <span class="ot">&lt;-</span> T.readFile x
-          dataDir <span class="ot">&lt;-</span> getDataDir
-          <span class="kw">let</span> sections  <span class="fu">=</span> parse (getLanguage x) code
-              opts&#39;     <span class="fu">=</span> configHyakko opts dataDir
-          unless (isNothing <span class="fu">$</span> layout opts&#39;) <span class="fu">$</span> <span class="kw">do</span>
-            <span class="kw">let</span> layoutDir <span class="fu">=</span> fromJust <span class="fu">$</span> layout opts&#39;
-            copyDirectory opts&#39;<span class="fu">$</span> dataDir <span class="fu">&lt;/&gt;</span> <span class="st">&quot;resources&quot;</span>
-                                         <span class="fu">&lt;/&gt;</span> layoutDir
-                                         <span class="fu">&lt;/&gt;</span> <span class="st">&quot;public&quot;</span>
-          <span class="kw">if</span> <span class="fu">null</span> sections <span class="kw">then</span>
-            <span class="fu">putStrLn</span> <span class="fu">$</span> <span class="st">&quot;hyakko doesn&#39;t support the language extension &quot;</span>
-                     <span class="fu">++</span> takeExtension x
-            <span class="kw">else</span> <span class="kw">do</span>
-              <span class="kw">let</span> highlighted <span class="fu">=</span> highlight x sections
-                  y           <span class="fu">=</span> mapSections sections highlighted
-              generateHTML opts&#39; x y
+generateDocumentation opts xs <span class="fu">=</span> <span class="kw">do</span>
+  dataDir <span class="ot">&lt;-</span> getDataDir
+  <span class="kw">let</span> opts&#39;  <span class="fu">=</span> configHyakko opts dataDir
+      dirout <span class="fu">=</span> output opts&#39;
+  style <span class="ot">&lt;-</span> hyakkoStyles opts&#39;
+  T.writeFile (dirout <span class="fu">&lt;/&gt;</span> <span class="st">&quot;hyakko.css&quot;</span>) style
+  unless (isNothing <span class="fu">$</span> layout opts&#39;) <span class="fu">$</span> <span class="kw">do</span>
+    <span class="kw">let</span> layoutDir <span class="fu">=</span> fromJust <span class="fu">$</span> layout opts&#39;
+    copyDirectory opts&#39; <span class="fu">$</span> dataDir <span class="fu">&lt;/&gt;</span> <span class="st">&quot;resources&quot;</span> <span class="fu">&lt;/&gt;</span> layoutDir
+                                  <span class="fu">&lt;/&gt;</span> <span class="st">&quot;public&quot;</span>
+  forM_ xs <span class="fu">$</span> \x <span class="ot">-&gt;</span> <span class="kw">do</span>
+    code <span class="ot">&lt;-</span> T.readFile x
+    <span class="kw">let</span> sections  <span class="fu">=</span> parse (getLanguage x) code
+    <span class="kw">if</span> <span class="fu">null</span> sections <span class="kw">then</span>
+      <span class="fu">putStrLn</span> <span class="fu">$</span> <span class="st">&quot;hyakko doesn&#39;t support the language extension &quot;</span>
+               <span class="fu">++</span> takeExtension x
+      <span class="kw">else</span> <span class="kw">do</span>
+        <span class="kw">let</span> highlighted <span class="fu">=</span> highlight x sections
+            y           <span class="fu">=</span> mapSections sections highlighted
+        generateHTML opts&#39; x y
 </code></pre>
 <p>Given a string of source code, parse out eacg block of prose and the code that follows it — by detecting which is which, line by line — then create an individual <strong>section</strong> for it. Each section is Map with <code>docText</code> and <code>codeText</code> properties, and eventuall <code>docsHtml</code> and <code>codeHtml</code> as well.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">inSections ::</span> [<span class="dt">Text</span>] <span class="ot">-&gt;</span> <span class="dt">ByteString</span> <span class="ot">-&gt;</span> <span class="dt">Sections</span>
 inSections xs r <span class="fu">=</span>
   <span class="kw">let</span> sections <span class="fu">=</span> sectionOff <span class="st">&quot;&quot;</span> <span class="st">&quot;&quot;</span> xs
   <span class="kw">in</span> <span class="fu">map</span> M.fromList sections
 
-  <span class="kw">where</span><span class="ot"> sectionOff ::</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> [<span class="dt">Text</span>] <span class="ot">-&gt;</span> [[(<span class="dt">String</span>, <span class="dt">Text</span>)]]
-        sectionOff code docs [] <span class="fu">=</span> [ (<span class="st">&quot;codeText&quot;</span>, code)
-                                  , (<span class="st">&quot;docsText&quot;</span>, docs)
-                                  ] <span class="fu">:</span> []
+  <span class="kw">where</span><span class="ot"> save ::</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> [(<span class="dt">String</span>, <span class="dt">Text</span>)]
+        save code docs <span class="fu">=</span> [ (<span class="st">&quot;codeText&quot;</span>, code)
+                         , (<span class="st">&quot;docsText&quot;</span>, docs)
+                         ]
+
+<span class="ot">        sectionOff ::</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> [<span class="dt">Text</span>] <span class="ot">-&gt;</span> [[(<span class="dt">String</span>, <span class="dt">Text</span>)]]
+        sectionOff code docs [] <span class="fu">=</span> save code docs <span class="fu">:</span> []
         sectionOff code docs (y<span class="fu">:</span>ys) <span class="fu">=</span>
-          <span class="kw">if</span> T.unpack y <span class="fu">=~</span> r <span class="kw">then</span>
-            handleDocs code
-            <span class="kw">else</span>
-              sectionOff (code <span class="fu">++.</span> y <span class="fu">++.</span> <span class="st">&quot;\n&quot;</span>) docs ys
+          <span class="kw">let</span> line    <span class="fu">=</span> T.unpack y
+              shebang <span class="fu">=</span> L.pack <span class="st">&quot;(^#![/]|^\\s*#\\{)&quot;</span>
+          <span class="kw">in</span> <span class="kw">if</span> line <span class="fu">=~</span> r <span class="fu">&amp;&amp;</span> (<span class="fu">not</span> <span class="fu">$</span> line <span class="fu">=~</span> shebang) <span class="kw">then</span>
+               handleDocs code
+               <span class="kw">else</span>
+                 sectionOff (code <span class="fu">++.</span> y <span class="fu">++.</span> <span class="st">&quot;\n&quot;</span>) docs ys
 
           <span class="kw">where</span> handleDocs <span class="st">&quot;&quot;</span> <span class="fu">=</span> handleHeaders code (newdocs docs) ys
-                handleDocs _  <span class="fu">=</span> [ (<span class="st">&quot;codeText&quot;</span>, code)
-                                , (<span class="st">&quot;docsText&quot;</span>, docs)
-                                ] <span class="fu">:</span> handleHeaders <span class="st">&quot;&quot;</span> (newdocs <span class="st">&quot;&quot;</span>) ys
+                handleDocs _  <span class="fu">=</span> save code docs
+                              <span class="fu">:</span> handleHeaders <span class="st">&quot;&quot;</span> (newdocs <span class="st">&quot;&quot;</span>) ys
 
                 newdocs d <span class="fu">=</span> d <span class="fu">++.</span> (replace r y <span class="st">&quot;&quot;</span>) <span class="fu">++.</span> <span class="st">&quot;\n&quot;</span>
 </code></pre>
 <p>If there is a header markup, only for <code>---</code> and <code>===</code>, it will get its own line from the other documentation.</p><pre class="sourceCode"><code class="sourceCode">                handleHeaders c d zs <span class="fu">=</span>
                   <span class="kw">if</span> T.unpack d <span class="fu">=~</span> L.pack <span class="st">&quot;^(---|===)+&quot;</span> <span class="kw">then</span>
-                    [ (<span class="st">&quot;codeText&quot;</span>, c)
-                    , (<span class="st">&quot;docsText&quot;</span>, d)
-                    ] <span class="fu">:</span> sectionOff <span class="st">&quot;&quot;</span> <span class="st">&quot;&quot;</span> zs
+                    save c d <span class="fu">:</span> sectionOff <span class="st">&quot;&quot;</span> <span class="st">&quot;&quot;</span> zs
                     <span class="kw">else</span>
                       sectionOff c d zs
 </code></pre>
 <p>The higher level interface for calling <code>inSections</code>. <code>parse</code> basically sanitates the file — turing literate into regular source and take out shebangs — then feed it to <code>inSections</code>, and finally return the results.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">parse ::</span> <span class="dt">Maybe</span> <span class="dt">Language</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Sections</span>
 parse <span class="kw">Nothing</span> _       <span class="fu">=</span> []
 parse (<span class="kw">Just</span> src) code <span class="fu">=</span>
-  inSections (newlines line (literate src) <span class="kw">True</span>)
+  inSections (fromLiterate (T.lines code) (literate src) <span class="kw">True</span>)
              (<span class="st">&quot;^\\s*&quot;</span> <span class="fu">++*</span> symbol src <span class="fu">++*</span> <span class="st">&quot;\\s?&quot;</span>)
-  <span class="kw">where</span><span class="ot"> line ::</span> [<span class="dt">Text</span>]
-        line <span class="fu">=</span> <span class="fu">filter</span> ((<span class="fu">/=</span>) <span class="st">&quot;#!&quot;</span> <span class="fu">.</span> T.take <span class="dv">2</span>) <span class="fu">$</span> T.lines code
 </code></pre>
-<p>Transforms a literate style language file into its normal, non-literate style language. If it is normal, <code>newlines</code> for returns the same list of <code>Text</code> that was passed in.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">        newlines ::</span> [<span class="dt">Text</span>] <span class="ot">-&gt;</span> <span class="dt">Maybe</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> [<span class="dt">Text</span>]
-        newlines [] _ _            <span class="fu">=</span> []
-        newlines xs <span class="kw">Nothing</span> _      <span class="fu">=</span> xs
-        newlines (x<span class="fu">:</span>xs) lit isText <span class="fu">=</span>
+<p>Transforms a literate style language file into its normal, non-literate style language. If it is normal, <code>fromLiterate</code> for returns the same list of <code>Text</code> that was passed in.</p><pre class="sourceCode"><code class="sourceCode">  <span class="kw">where</span><span class="ot"> fromLiterate ::</span> [<span class="dt">Text</span>] <span class="ot">-&gt;</span> <span class="dt">Maybe</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> [<span class="dt">Text</span>]
+        fromLiterate [] _ _            <span class="fu">=</span> []
+        fromLiterate xs <span class="kw">Nothing</span> _      <span class="fu">=</span> xs
+        fromLiterate (x<span class="fu">:</span>xs) lit isText <span class="fu">=</span>
           <span class="kw">let</span> s       <span class="fu">=</span> symbol src
               r       <span class="fu">=</span> <span class="st">&quot;^&quot;</span> <span class="fu">++*</span> (fromJust <span class="fu">$</span> litSymbol src) <span class="fu">++*</span> <span class="st">&quot;\\s?&quot;</span>
               r1      <span class="fu">=</span> L.pack <span class="st">&quot;^\\s*$&quot;</span>
@@ -137,7 +139,7 @@ parse (<span class="kw">Just</span> src) code <span class="fu">=</span>
                      <span class="kw">else</span>
                        insert (T.unpack x <span class="fu">=~</span> r1) isText
                          ((T.pack <span class="fu">$</span> L.unpack s)  <span class="fu">++.</span> <span class="st">&quot; &quot;</span> <span class="fu">++.</span> x)
-          <span class="kw">in</span> x&#39;<span class="fu">:</span> newlines xs lit y
+          <span class="kw">in</span> x&#39;<span class="fu">:</span> fromLiterate xs lit y
 </code></pre>
 <p>Inserts a comment symbol and a single space into the documentation line and check if the last line was code and documentation. If the previous line was code and the line is blank or has just whitespace, it returns a blank <code>Text</code> datatype; otherwise it will return just the comment symbol.</p><pre class="sourceCode"><code class="sourceCode">          <span class="kw">where</span><span class="ot"> insert ::</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> (<span class="dt">Text</span>, <span class="dt">Bool</span>)
                 insert <span class="kw">True</span> <span class="kw">True</span> _  <span class="fu">=</span> (T.pack <span class="fu">.</span> L.unpack
@@ -164,71 +166,6 @@ mapSections section highlighted <span class="fu">=</span>
                    <span class="kw">in</span> M.insert <span class="st">&quot;docsHtml&quot;</span> (docText sect) <span class="fu">$</span>
                       M.insert <span class="st">&quot;codeHtml&quot;</span> (codeText x) sect
   <span class="kw">in</span> <span class="fu">map</span> intoMap [<span class="dv">0</span> <span class="fu">..</span> sectLength]
-</code></pre>
-<p>Determine whether or not there is a <code>Jump to</code> section.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">multiTemplate ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> [(<span class="dt">String</span>, <span class="dt">String</span>)]
-multiTemplate <span class="dv">1</span> <span class="fu">=</span> []
-multiTemplate _ <span class="fu">=</span> [(<span class="st">&quot;multi&quot;</span>, <span class="st">&quot;1&quot;</span>)]
-</code></pre>
-<p>Produces a list of anchor tags to different files in docs. This will only show up if the template support it and there are more than one source file generated.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">sourceTemplate ::</span> <span class="dt">Hyakko</span> <span class="ot">-&gt;</span> [<span class="fu">FilePath</span>] <span class="ot">-&gt;</span> [(<span class="dt">String</span>, <span class="dt">String</span>)]
-sourceTemplate opts <span class="fu">=</span> <span class="fu">map</span> source
-  <span class="kw">where</span> source x <span class="fu">=</span> (<span class="st">&quot;source&quot;</span>, <span class="fu">concat</span>
-          [ <span class="st">&quot;&lt;a class=\&quot;source\&quot; href=\&quot;&quot;</span>
-          , takeFileName <span class="fu">$</span> destination (output opts) x
-          , <span class="st">&quot;\&quot;&gt;&quot;</span>
-          , takeFileName x
-          , <span class="st">&quot;&lt;/a&gt;&quot;</span>
-          ])
-</code></pre>
-<p>Depending on the layout type, <code>sectionTemplate</code> will produce the HTML that will be hooked into the templates layout theme.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">sectionTemplate ::</span> <span class="dt">Sections</span>
-                <span class="ot">-&gt;</span> <span class="dt">Maybe</span> <span class="dt">String</span>
-                <span class="ot">-&gt;</span> [<span class="dt">Int</span>]
-                <span class="ot">-&gt;</span> [(<span class="dt">String</span>, <span class="dt">String</span>)]
-sectionTemplate section layoutType count <span class="fu">=</span>
-  <span class="kw">let</span> isLayout <span class="fu">=</span> <span class="fu">not</span> <span class="fu">$</span> isNothing layoutType
-      sections <span class="fu">=</span> <span class="kw">if</span> isLayout <span class="kw">then</span> layoutFn <span class="fu">$</span> fromJust layoutType
-                 <span class="kw">else</span> <span class="fu">undefined</span>
-  <span class="kw">in</span> <span class="fu">map</span> sections count
-  <span class="kw">where</span> layoutFn <span class="st">&quot;parallel&quot;</span> <span class="fu">=</span> parallel
-        layoutFn <span class="st">&quot;linear&quot;</span>   <span class="fu">=</span> linear
-        layoutFn _          <span class="fu">=</span> <span class="fu">undefined</span>
-        parallel x <span class="fu">=</span>
-          <span class="kw">let</span> x&#39;   <span class="fu">=</span> x <span class="fu">+</span> <span class="dv">1</span>
-              sect <span class="fu">=</span> section <span class="fu">!!</span> x
-              docsHtml <span class="fu">=</span> T.unpack <span class="fu">$</span> sect <span class="fu">M.!</span> <span class="st">&quot;docsHtml&quot;</span>
-              codeHtml <span class="fu">=</span> T.unpack <span class="fu">$</span> sect <span class="fu">M.!</span> <span class="st">&quot;codeHtml&quot;</span>
-              codeText <span class="fu">=</span> T.unpack <span class="fu">$</span> sect <span class="fu">M.!</span> <span class="st">&quot;codeText&quot;</span>
-              header   <span class="fu">=</span> docsHtml <span class="fu">=~</span> L.pack <span class="st">&quot;^\\s*&lt;(h\\d)&quot;</span>
-              isBlank  <span class="fu">=</span> T.null <span class="fu">$</span> replace <span class="st">&quot;\\s&quot;</span> (T.pack codeText) <span class="st">&quot;&quot;</span>
-          <span class="kw">in</span> (<span class="st">&quot;section&quot;</span>, <span class="fu">concat</span>
-             [ <span class="st">&quot;&lt;li id=\&quot;section-&quot;</span>
-             , <span class="fu">show</span> x&#39;
-             , <span class="st">&quot;\&quot;&gt;&lt;div class=\&quot;annotation\&quot;&gt;&quot;</span>
-             , <span class="st">&quot;&lt;div class=\&quot;pilwrap&quot;</span>
-             , <span class="kw">if</span> <span class="fu">null</span> header <span class="kw">then</span> <span class="st">&quot;&quot;</span> <span class="kw">else</span> <span class="st">&quot; for-&quot;</span> <span class="fu">++</span> <span class="fu">tail</span> header
-             , <span class="st">&quot;\&quot;&gt;&lt;a class=\&quot;pilcrow\&quot; href=\&quot;&quot;</span>
-             , <span class="fu">show</span> x&#39;
-             , <span class="st">&quot;\&quot;&gt;&amp;#955;&lt;/a&gt;&lt;/div&gt;&quot;</span>
-             , docsHtml
-             , <span class="st">&quot;&lt;/div&gt;&quot;</span>
-             , <span class="kw">if</span> isBlank <span class="kw">then</span> <span class="st">&quot;&quot;</span> <span class="kw">else</span> <span class="st">&quot;&lt;div class=\&quot;content\&quot;&gt;&quot;</span>
-                 <span class="fu">++</span> codeHtml <span class="fu">++</span> <span class="st">&quot;&lt;/div&gt;&quot;</span>
-             ])
-        linear x <span class="fu">=</span>
-          <span class="kw">let</span> sect   <span class="fu">=</span> section <span class="fu">!!</span> x
-              codeText <span class="fu">=</span> T.unpack <span class="fu">$</span> sect <span class="fu">M.!</span> <span class="st">&quot;codeText&quot;</span>
-              isText <span class="fu">=</span> <span class="fu">not</span> <span class="fu">$</span> <span class="fu">null</span> codeText
-          <span class="kw">in</span> (<span class="st">&quot;section&quot;</span>, <span class="fu">concat</span>
-             [ T.unpack <span class="fu">$</span> sect <span class="fu">M.!</span> <span class="st">&quot;docsHtml&quot;</span>
-             , <span class="kw">if</span> isText <span class="kw">then</span> T.unpack <span class="fu">$</span> sect <span class="fu">M.!</span> <span class="st">&quot;codeHtml&quot;</span> <span class="kw">else</span> []
-             ])
-
-<span class="ot">cssTemplate ::</span> <span class="dt">Hyakko</span> <span class="ot">-&gt;</span> [(<span class="dt">String</span>, <span class="dt">String</span>)]
-cssTemplate opts <span class="fu">=</span>
-  <span class="kw">let</span> maybeLayout <span class="fu">=</span> layout opts
-      normalize   <span class="fu">=</span> <span class="st">&quot;public&quot;</span> <span class="fu">&lt;/&gt;</span> <span class="st">&quot;stylesheets&quot;</span> <span class="fu">&lt;/&gt;</span> <span class="st">&quot;normalize.css&quot;</span>
-      otherFile   <span class="fu">=</span> <span class="kw">if</span> isNothing maybeLayout <span class="kw">then</span> <span class="fu">id</span> <span class="kw">else</span>
-        ([normalize] <span class="fu">++</span>)
-  <span class="kw">in</span> <span class="fu">zip</span> [<span class="st">&quot;css&quot;</span>, <span class="st">&quot;css&quot;</span>] <span class="fu">$</span> otherFile [<span class="st">&quot;hyakko.css&quot;</span>]
 </code></pre>
 <p>Once all of the code is finished highlighting, we can generate the HTML file and write out the documentation. Pass the completed sections into the template found in <code>resources/linear/hyakko.html</code> or <code>resources/parallel/hyakko.html</code>.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">generateHTML ::</span> <span class="dt">Hyakko</span> <span class="ot">-&gt;</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="dt">Sections</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
 generateHTML opts src section <span class="fu">=</span> <span class="kw">do</span>
@@ -264,25 +201,6 @@ getHeader htmlheader <span class="fu">=</span>
   <span class="kw">in</span> header
 </code></pre>
 <h2 id="helpers-setup">Helpers &amp; Setup</h2>
-<p>The <code>Sections</code> type is just an alias to keep type signatures short.</p><pre class="sourceCode"><code class="sourceCode"><span class="kw">type</span> <span class="dt">Sections</span> <span class="fu">=</span> [<span class="dt">HashMap</span> <span class="dt">String</span> <span class="dt">Text</span>]
-</code></pre>
-<p>Alias <code>Languages</code>, for the multiple different languages inside the <code>languages.json</code> file.</p><pre class="sourceCode"><code class="sourceCode"><span class="kw">type</span> <span class="dt">Languages</span> <span class="fu">=</span> <span class="dt">HashMap</span> <span class="dt">String</span> <span class="dt">Language</span>
-</code></pre>
-<p>Better data type for language info — compared to the <code>Object</code> data type in <code>Aeson</code>.</p><pre class="sourceCode"><code class="sourceCode"><span class="kw">data</span> <span class="dt">Language</span> <span class="fu">=</span>
-  <span class="dt">Language</span> {<span class="ot"> name_     ::</span> <span class="dt">ByteString</span>
-           ,<span class="ot"> symbol    ::</span> <span class="dt">ByteString</span>
-           ,<span class="ot"> literate  ::</span> <span class="dt">Maybe</span> <span class="dt">Bool</span>
-           ,<span class="ot"> litSymbol ::</span> <span class="dt">Maybe</span> <span class="dt">ByteString</span>
-           }
-
-<span class="kw">instance</span> <span class="dt">FromJSON</span> <span class="dt">Language</span> <span class="kw">where</span>
-  parseJSON (<span class="dt">Object</span> o) <span class="fu">=</span> <span class="dt">Language</span>
-                     <span class="fu">&lt;$&gt;</span> o <span class="fu">.:</span>  <span class="st">&quot;name&quot;</span>
-                     <span class="fu">&lt;*&gt;</span> o <span class="fu">.:</span>  <span class="st">&quot;symbol&quot;</span>
-                     <span class="fu">&lt;*&gt;</span> o <span class="fu">.:?</span> <span class="st">&quot;literate&quot;</span>
-                     <span class="fu">&lt;*&gt;</span> o <span class="fu">.:?</span> <span class="st">&quot;litSymbol&quot;</span>
-  parseJSON _          <span class="fu">=</span> empty
-</code></pre>
 <p>Infix functions for easier concatenation with Text and ByteString.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">(++.) ::</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span>
 (<span class="fu">++.</span>) <span class="fu">=</span> T.append
 <span class="ot">{-# INLINE (++.) #-}</span>
@@ -340,7 +258,7 @@ sources file <span class="fu">=</span> <span class="kw">do</span>
   files <span class="ot">&lt;-</span> forM file <span class="fu">$</span> \x <span class="ot">-&gt;</span> <span class="kw">do</span>
     isDir <span class="ot">&lt;-</span> doesDirectoryExist x
     <span class="kw">if</span> isDir <span class="kw">then</span>
-      unpackDirectories x <span class="fu">&gt;&gt;=</span> <span class="fu">return</span> <span class="fu">.</span> <span class="fu">fst</span>
+      <span class="fu">fst</span> <span class="fu">&lt;$&gt;</span> unpackDirectories x
       <span class="kw">else</span>
         <span class="fu">return</span> [x]
   <span class="fu">return</span> <span class="fu">.</span> <span class="fu">sort</span> <span class="fu">$</span> <span class="fu">concat</span> files
@@ -348,12 +266,12 @@ sources file <span class="fu">=</span> <span class="kw">do</span>
 <p>Turns the directory give into a list of files including all of the files in sub-directories.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">unpackDirectories ::</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> ([<span class="fu">FilePath</span>], [<span class="fu">FilePath</span>])
 unpackDirectories d <span class="fu">=</span> <span class="kw">do</span>
   <span class="kw">let</span> reg <span class="fu">=</span> L.pack <span class="st">&quot;[^(^\\.{1,2}$)]&quot;</span>
-  content <span class="ot">&lt;-</span> getDirectoryContents d <span class="fu">&gt;&gt;=</span> <span class="fu">return</span> <span class="fu">.</span> <span class="fu">filter</span> (<span class="fu">=~</span> reg)
+  content <span class="ot">&lt;-</span>  <span class="fu">filter</span> (<span class="fu">=~</span> reg) <span class="fu">&lt;$&gt;</span> getDirectoryContents d
   <span class="kw">let</span> content&#39; <span class="fu">=</span> <span class="fu">map</span> (d <span class="fu">&lt;/&gt;</span>) content
   files <span class="ot">&lt;-</span> filterM doesFileExist content&#39;
   subdir <span class="ot">&lt;-</span> filterM doesDirectoryExist content&#39;
-  subcontent <span class="ot">&lt;-</span> <span class="fu">mapM</span> unpackDirectories subdir <span class="fu">&gt;&gt;=</span> \x <span class="ot">-&gt;</span>
-    <span class="fu">return</span> (<span class="fu">concatMap</span> <span class="fu">fst</span> x, <span class="fu">concatMap</span> <span class="fu">snd</span> x)
+  subcontent <span class="ot">&lt;-</span> <span class="fu">fmap</span> (\x <span class="ot">-&gt;</span> (<span class="fu">concatMap</span> <span class="fu">fst</span> x, <span class="fu">concatMap</span> <span class="fu">snd</span> x))
+                     (<span class="fu">mapM</span> unpackDirectories subdir)
   <span class="fu">return</span> (files <span class="fu">++</span> <span class="fu">fst</span> subcontent, subdir <span class="fu">++</span> <span class="fu">snd</span> subcontent)
 
 <span class="ot">copyDirectory ::</span> <span class="dt">Hyakko</span> <span class="ot">-&gt;</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
@@ -377,14 +295,6 @@ copyDirectory opts dir <span class="fu">=</span> <span class="kw">do</span>
     copyFile x file
 </code></pre>
 <h2 id="configuration">Configuration</h2>
-<p>Data structure for command line argument parsing.</p><pre class="sourceCode"><code class="sourceCode"><span class="kw">data</span> <span class="dt">Hyakko</span> <span class="fu">=</span>
-  <span class="dt">Hyakko</span> {<span class="ot"> layout     ::</span> <span class="dt">Maybe</span> <span class="dt">String</span>
-         ,<span class="ot"> output     ::</span> <span class="fu">FilePath</span>
-         ,<span class="ot"> css        ::</span> <span class="dt">Maybe</span> <span class="fu">FilePath</span>
-         ,<span class="ot"> template   ::</span> <span class="dt">Maybe</span> <span class="fu">FilePath</span>
-         ,<span class="ot"> dirOrFiles ::</span> [<span class="fu">FilePath</span>]
-         } <span class="kw">deriving</span> (<span class="kw">Show</span>, <span class="dt">Data</span>, <span class="dt">Typeable</span>)
-</code></pre>
 <p>Default configuration <strong>options</strong>. If no arguments for these flags are specifed, it will just use the ones in <code>defaultConfig</code>.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">defaultConfig ::</span> <span class="dt">Hyakko</span>
 defaultConfig <span class="fu">=</span> <span class="dt">Hyakko</span>
   { layout     <span class="fu">=</span> <span class="kw">Just</span> <span class="st">&quot;parallel&quot;</span> <span class="fu">&amp;=</span> typ <span class="st">&quot;LAYOUT&quot;</span>
@@ -412,11 +322,8 @@ configHyakko oldConfig datadir <span class="fu">=</span>
 <p>Finally, using <a href="http://community.haskell.org/~ndm/cmdargs/">CmdArgs</a>, define a command line interface. Parse options and hyakko does the rest.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">main ::</span> <span class="dt">IO</span> ()
 main <span class="fu">=</span> <span class="kw">do</span>
   opts <span class="ot">&lt;-</span> cmdArgs defaultConfig
-  style <span class="ot">&lt;-</span> hyakkoStyles opts
   source <span class="ot">&lt;-</span> sources <span class="fu">$</span> dirOrFiles opts
-  <span class="kw">let</span> dirout <span class="fu">=</span> output opts
-  createDirectoryIfMissing <span class="kw">False</span> dirout
-  T.writeFile (dirout <span class="fu">&lt;/&gt;</span> <span class="st">&quot;hyakko.css&quot;</span>) style
+  createDirectoryIfMissing <span class="kw">False</span> <span class="fu">$</span> output opts
   generateDocumentation opts source</code></pre>
       <div class="fleur">h</div>
     </div>
