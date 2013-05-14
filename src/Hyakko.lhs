@@ -81,25 +81,26 @@ printing them out in an HTML template.
 > generateDocumentation :: Hyakko -> [FilePath] -> IO ()
 > generateDocumentation _ [] =
 >   putStrLn "hyakko: no files or options given (try --help)"
-> generateDocumentation opts xs = mapM_ generate xs
->   where generate :: FilePath -> IO ()
->         generate x = do
->           code <- T.readFile x
->           dataDir <- getDataDir
->           let sections  = parse (getLanguage x) code
->               opts'     = configHyakko opts dataDir
->           unless (isNothing $ layout opts') $ do
->             let layoutDir = fromJust $ layout opts'
->             copyDirectory opts'$ dataDir </> "resources"
->                                          </> layoutDir
->                                          </> "public"
->           if null sections then
->             putStrLn $ "hyakko doesn't support the language extension "
->                      ++ takeExtension x
->             else do
->               let highlighted = highlight x sections
->                   y           = mapSections sections highlighted
->               generateHTML opts' x y
+> generateDocumentation opts xs = do
+>   dataDir <- getDataDir
+>   let opts'  = configHyakko opts dataDir
+>       dirout = output opts'
+>   style <- hyakkoStyles opts'
+>   T.writeFile (dirout </> "hyakko.css") style
+>   unless (isNothing $ layout opts') $ do
+>     let layoutDir = fromJust $ layout opts'
+>     copyDirectory opts' $ dataDir </> "resources" </> layoutDir
+>                                   </> "public"
+>   forM_ xs $ \x -> do
+>     code <- T.readFile x
+>     let sections  = parse (getLanguage x) code
+>     if null sections then
+>       putStrLn $ "hyakko doesn't support the language extension "
+>                ++ takeExtension x
+>       else do
+>         let highlighted = highlight x sections
+>             y           = mapSections sections highlighted
+>         generateHTML opts' x y
 
 Given a string of source code, parse out eacg block of prose and the code
 that follows it — by detecting which is which, line by line — then create an
