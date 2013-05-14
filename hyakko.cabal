@@ -50,7 +50,7 @@ data-files:
                   resources/parallel/public/fonts/novecento-bold.ttf
                   resources/parallel/public/fonts/novecento-bold.woff
 extra-source-files:
-                  src/Text/Markdown.hs
+                  src/Hyakko/Text/Markdown.hs
 
 source-repository head
   type:           git

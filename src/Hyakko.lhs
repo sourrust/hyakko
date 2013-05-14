@@ -34,7 +34,7 @@ file](https://github.com/sourrust/hyakko/blob/master/resources/languages.json).
 
 > module Main where
 
-> import Text.Markdown
+> import Hyakko.Text.Markdown
 
 > import Data.Aeson
 > import Data.HashMap.Strict (HashMap)
