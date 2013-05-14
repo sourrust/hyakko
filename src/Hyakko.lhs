@@ -30,7 +30,7 @@ only one supported at this time, but other literate styles can be added
 fairly easily via a [separate languages
 file](https://github.com/sourrust/hyakko/blob/master/resources/languages.json).
 
-> {-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
+> {-# LANGUAGE OverloadedStrings #-}
 
 > module Main where
 
@@ -451,16 +451,6 @@ Copy all the files into the recently created directories.
 
 Configuration
 -------------
-
-Data structure for command line argument parsing.
-
-> data Hyakko =
->   Hyakko { layout     :: Maybe String
->          , output     :: FilePath
->          , css        :: Maybe FilePath
->          , template   :: Maybe FilePath
->          , dirOrFiles :: [FilePath]
->          } deriving (Show, Data, Typeable)
 
 Default configuration **options**. If no arguments for these flags are
 specifed, it will just use the ones in `defaultConfig`.

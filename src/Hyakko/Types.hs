@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
 
 module Hyakko.Types where
 
@@ -7,6 +7,7 @@ import Data.Aeson
 import Data.ByteString.Lazy (ByteString)
 import Data.HashMap.Strict (HashMap)
 import Data.Text (Text)
+import System.Console.CmdArgs
 
 -- The `Sections` type is just an alias to keep type signatures short.
 type Sections = [HashMap String Text]
@@ -31,3 +32,12 @@ instance FromJSON Language where
                      <*> o .:? "literate"
                      <*> o .:? "litSymbol"
   parseJSON _          = empty
+
+-- Data structure for command line argument parsing.
+data Hyakko =
+  Hyakko { layout     :: Maybe String
+         , output     :: FilePath
+         , css        :: Maybe FilePath
+         , template   :: Maybe FilePath
+         , dirOrFiles :: [FilePath]
+         } deriving (Show, Data, Typeable)
