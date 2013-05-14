@@ -45,6 +45,10 @@ sectionTemplate section layoutType count =
   where layoutFn "parallel" = parallel
         layoutFn "linear"   = linear
         layoutFn _          = undefined
+
+        -- Whenever the layout is sepecifed as **parallel**, this is the
+        -- function that will generate the mapping for variable name and
+        -- replacment value.
         parallel x =
           let x'   = x + 1
               sect = section !! x
@@ -72,6 +76,9 @@ sectionTemplate section layoutType count =
                   let str  = T.unpack orig
                       (_, _, rp) = str =~ reg :: (String, String, String)
                   in T.append replacer (T.pack rp)
+
+        -- Far simpler layout compared to **parallel**. This function gets
+        -- called when the layout is marked as **linear**.
         linear x =
           let sect   = section !! x
               codeText = T.unpack $ sect M.! "codeText"
