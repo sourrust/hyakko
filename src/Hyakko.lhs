@@ -119,10 +119,12 @@ individual **section** for it. Each section is Map with `docText` and
 >         sectionOff :: Text -> Text -> [Text] -> [[(String, Text)]]
 >         sectionOff code docs [] = save code docs : []
 >         sectionOff code docs (y:ys) =
->           if T.unpack y =~ r then
->             handleDocs code
->             else
->               sectionOff (code ++. y ++. "\n") docs ys
+>           let line    = T.unpack y
+>               shebang = L.pack "(^#![/]|^\\s*#\\{)"
+>           in if line =~ r && (not $ line =~ shebang) then
+>                handleDocs code
+>                else
+>                  sectionOff (code ++. y ++. "\n") docs ys
 
 >           where handleDocs "" = handleHeaders code (newdocs docs) ys
 >                 handleDocs _  = save code docs
@@ -146,16 +148,14 @@ shebangs — then feed it to `inSections`, and finally return the results.
 > parse :: Maybe Language -> Text -> Sections
 > parse Nothing _       = []
 > parse (Just src) code =
->   inSections (fromLiterate line (literate src) True)
+>   inSections (fromLiterate (T.lines code) (literate src) True)
 >              ("^\\s*" ++* symbol src ++* "\\s?")
->   where line :: [Text]
->         line = filter ((/=) "#!" . T.take 2) $ T.lines code
 
 Transforms a literate style language file into its normal, non-literate
 style language. If it is normal, `fromLiterate` for returns the same list of
 `Text` that was passed in.
 
->         fromLiterate :: [Text] -> Maybe Bool -> Bool -> [Text]
+>   where fromLiterate :: [Text] -> Maybe Bool -> Bool -> [Text]
 >         fromLiterate [] _ _            = []
 >         fromLiterate xs Nothing _      = xs
 >         fromLiterate (x:xs) lit isText =
