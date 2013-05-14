@@ -57,14 +57,15 @@ sectionTemplate section layoutType count =
               codeText = T.unpack $ sect M.! "codeText"
               header   = docsHtml =~ L.pack "^\\s*<(h\\d)"
               isBlank  = T.null $ replace "\\s" (T.pack codeText) ""
+              sectnum  = "section-" ++ show x'
           in ("section", concat
-             [ "<li id=\"section-"
-             , show x'
+             [ "<li id=\""
+             , sectnum
              , "\"><div class=\"annotation\">"
              , "<div class=\"pilwrap"
              , if null header then "" else " for-" ++ tail header
-             , "\"><a class=\"pilcrow\" href=\""
-             , show x'
+             , "\"><a class=\"pilcrow\" href=\"#"
+             , sectnum
              , "\">&#955;</a></div>"
              , docsHtml
              , "</div>"
