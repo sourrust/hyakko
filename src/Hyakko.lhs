@@ -48,7 +48,7 @@ file](https://github.com/sourrust/hyakko/blob/master/resources/languages.json).
 > import Data.List (sort)
 > import Data.Maybe (fromJust, isNothing)
 > import Data.Version (showVersion)
-> import Control.Applicative ((<$>), (<*>), empty)
+> import Control.Applicative ((<$>))
 > import Control.Monad (filterM, (>=>), forM, forM_, unless)
 > import qualified Text.Blaze.Html as B
 > import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
