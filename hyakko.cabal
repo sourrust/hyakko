@@ -51,6 +51,7 @@ data-files:
                   resources/parallel/public/fonts/novecento-bold.woff
 extra-source-files:
                   src/Hyakko/Text/Markdown.hs
+                  src/Hyakko/Types.hs
 
 source-repository head
   type:           git

@@ -37,8 +37,7 @@ file](https://github.com/sourrust/hyakko/blob/master/resources/languages.json).
 > import Hyakko.Text.Markdown
 > import Hyakko.Types
 
-> import Data.Aeson
-> import Data.HashMap.Strict (HashMap)
+> import Data.Aeson (decode')
 > import qualified Data.HashMap.Strict as M
 > import Data.ByteString.Lazy.Char8 (ByteString)
 > import qualified Data.ByteString.Lazy.Char8 as L
