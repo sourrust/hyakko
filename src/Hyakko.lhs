@@ -333,7 +333,7 @@ For each source file passed in as an argument, generate the documentation.
 >   files <- forM file $ \x -> do
 >     isDir <- doesDirectoryExist x
 >     if isDir then
->       unpackDirectories x >>= return . fst
+>       fst <$> unpackDirectories x
 >       else
 >         return [x]
 >   return . sort $ concat files
@@ -344,12 +344,12 @@ sub-directories.
 > unpackDirectories :: FilePath -> IO ([FilePath], [FilePath])
 > unpackDirectories d = do
 >   let reg = L.pack "[^(^\\.{1,2}$)]"
->   content <- getDirectoryContents d >>= return . filter (=~ reg)
+>   content <-  filter (=~ reg) <$> getDirectoryContents d
 >   let content' = map (d </>) content
 >   files <- filterM doesFileExist content'
 >   subdir <- filterM doesDirectoryExist content'
->   subcontent <- mapM unpackDirectories subdir >>= \x ->
->     return (concatMap fst x, concatMap snd x)
+>   subcontent <- fmap (\x -> (concatMap fst x, concatMap snd x))
+>                      (mapM unpackDirectories subdir)
 >   return (files ++ fst subcontent, subdir ++ snd subcontent)
 
 > copyDirectory :: Hyakko -> FilePath -> IO ()
