@@ -1,4 +1,4 @@
-module Text.Markdown (toHTML) where
+module Hyakko.Text.Markdown (toHTML) where
 
 import Text.Pandoc ( readMarkdown
                    , writeHtmlString
