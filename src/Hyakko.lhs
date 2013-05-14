@@ -35,6 +35,7 @@ file](https://github.com/sourrust/hyakko/blob/master/resources/languages.json).
 > module Main where
 
 > import Hyakko.Text.Markdown
+> import Hyakko.Types
 
 > import Data.Aeson
 > import Data.HashMap.Strict (HashMap)
@@ -324,33 +325,6 @@ header at the top of the file.
 
 Helpers & Setup
 ---------------
-
-The `Sections` type is just an alias to keep type signatures short.
-
-> type Sections = [HashMap String Text]
-
-Alias `Languages`, for the multiple different languages inside the
-`languages.json` file.
-
-> type Languages = HashMap String Language
-
-Better data type for language info — compared to the `Object` data type in
-`Aeson`.
-
-> data Language =
->   Language { name_     :: ByteString
->            , symbol    :: ByteString
->            , literate  :: Maybe Bool
->            , litSymbol :: Maybe ByteString
->            }
-
-> instance FromJSON Language where
->   parseJSON (Object o) = Language
->                      <$> o .:  "name"
->                      <*> o .:  "symbol"
->                      <*> o .:? "literate"
->                      <*> o .:? "litSymbol"
->   parseJSON _          = empty
 
 Infix functions for easier concatenation with Text and ByteString.
 
