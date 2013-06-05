@@ -150,17 +150,17 @@ shebangs — then feed it to `inSections`, and finally return the results.
 > parse :: Maybe Language -> Text -> Sections
 > parse Nothing _       = []
 > parse (Just src) code =
->   inSections (fromLiterate (T.lines code) (literate src) True)
+>   inSections (fromLiterate (T.lines code) $ literate src)
 >              ("^\\s*" ++* symbol src ++* "\\s?")
 
 Transforms a literate style language file into its normal, non-literate
 style language. If it is normal, `fromLiterate` for returns the same list of
 `Text` that was passed in.
 
->   where fromLiterate :: [Text] -> Maybe Bool -> Bool -> [Text]
->         fromLiterate [] _ _            = []
->         fromLiterate xs Nothing _      = xs
->         fromLiterate (x:xs) lit isText =
+>   where fromLiterate :: [Text] -> Maybe Bool -> [Text]
+>         fromLiterate [] _       = []
+>         fromLiterate xs Nothing = xs
+>         fromLiterate xs _       =
 >           let s       = symbol src
 >               r       = "^" ++* (fromJust $ litSymbol src) ++* "\\s?"
 >               r1      = L.pack "^\\s*$"
