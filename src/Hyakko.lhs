@@ -49,7 +49,8 @@ file](https://github.com/sourrust/hyakko/blob/master/resources/languages.json).
 > import Data.Maybe (fromJust, isNothing)
 > import Data.Version (showVersion)
 > import Control.Applicative ((<$>))
-> import Control.Monad (filterM, (>=>), forM, forM_, unless)
+> import Control.Monad (filterM, (>=>), forM, forM_, unless, when)
+> import Control.Monad.State.Strict
 > import qualified Text.Blaze.Html as B
 > import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
 > import qualified Text.Highlighting.Kate as K
@@ -164,12 +165,12 @@ style language. If it is normal, `fromLiterate` for returns the same list of
 >           let s  = T.pack . L.unpack $ symbol src
 >               r  = "^" ++* (fromJust $ litSymbol src) ++* "\\s?"
 >               r1 = L.pack "^\\s*$"
->               (x', y) = if T.unpack x =~ r then
->                      (replace r x "", False)
->                      else
->                        insert (T.unpack x =~ r1) isText
->                          ((T.pack $ L.unpack s)  ++. " " ++. x)
->           in x': fromLiterate xs lit y
+>               fn = forM xs $ \x -> do
+>                 (ys, isText) <- get
+>                 let hasLitSymbol = T.unpack x =~ r
+
+>                 when hasLitSymbol $
+>                   put (ys ++ [replace r x ""], False)
 
 Inserts a comment symbol and a single space into the documentation line and
 check if the last line was code and documentation. If the previous line was
