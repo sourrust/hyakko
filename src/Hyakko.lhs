@@ -113,7 +113,7 @@ individual **section** for it. Each section is Map with `docText` and
 
 > inSections :: [Text] -> ByteString -> Sections
 > inSections xs r =
->   let sections = sectionOff "" "" xs
+>   let sections = sectionOff mempty mempty xs
 >   in map M.fromList sections
 
 >   where save :: Text -> Text -> [(String, Text)]
@@ -133,16 +133,16 @@ individual **section** for it. Each section is Map with `docText` and
 
 >           where handleDocs "" = handleHeaders code (newdocs docs) ys
 >                 handleDocs _  = save code docs
->                               : handleHeaders "" (newdocs "") ys
+>                               : handleHeaders mempty (newdocs mempty) ys
 
->                 newdocs d = d <> (replace r y "") <> "\n"
+>                 newdocs d = d <> (replace r y mempty) <> "\n"
 
 If there is a header markup, only for `---` and `===`, it will get its own
 line from the other documentation.
 
 >                 handleHeaders c d zs =
 >                   if T.unpack d =~ L.pack "^(---|===)+" then
->                     save c d : sectionOff "" "" zs
+>                     save c d : sectionOff mempty mempty zs
 >                     else
 >                       sectionOff c d zs
 
@@ -172,7 +172,7 @@ style language. If it is normal, `fromLiterate` for returns the same list of
 >                 let hasLitSymbol = T.unpack x =~ r
 
 >                 when hasLitSymbol $
->                   put (ys ++ [replace r x ""], False)
+>                   put (ys ++ [replace r x mempty], False)
 
 Inserts a comment symbol and a single space into the documentation line and
 check if the last line was code and documentation. If the previous line was
@@ -182,9 +182,9 @@ datatype; otherwise it will return just the comment symbol.
 >                 unless hasLitSymbol $
 >                   case (T.unpack x =~ r1, isText) of
 >                     (True, True)  -> put (ys ++ [s], True)
->                     (True, False) -> put (ys ++ [T.empty], False)
+>                     (True, False) -> put (ys ++ [mempty], False)
 >                     (False, _)    -> put (ys ++ [s <> " " <> x], True)
->           in fst . snd $ runState fn ([], True)
+>           in fst . snd $ runState fn (mempty, True)
 
 Highlights the current file of code, using **Kate**, and outputs the the
 highlighted html to its caller.
@@ -226,8 +226,9 @@ template found in `resources/linear/hyakko.html` or
 >       isHeader    = header =~ L.pack "^<(h\\d)"
 >       count       = [0 .. (length section) - 1]
 >       (h, count') = if isHeader then
->         let layout' = if isNothing maybeLayout then ""
->                       else fromJust maybeLayout
+>         let layout' = if isNothing maybeLayout
+>                         then mempty
+>                         else fromJust maybeLayout
 >         in ( [("header", header)]
 >            , (if layout' == "linear" then tail else id) count)
 >         else
@@ -360,14 +361,14 @@ Create all the directories needed to put future files into.
 
 >   forM_ dirs $ \x -> do
 >     let x'   = T.pack x
->         dir' = T.unpack $ T.replace oldLocation "" x'
+>         dir' = T.unpack $ T.replace oldLocation mempty x'
 >     createDirectoryIfMissing False $ dirout </> dir'
 
 Copy all the files into the recently created directories.
 
 >   forM_ files $ \x -> do
 >     let x'   = T.pack x
->         file = dirout </> (T.unpack $ T.replace oldLocation "" x')
+>         file = dirout </> (T.unpack $ T.replace oldLocation mempty x')
 >     copyFile x file
 
 Configuration
