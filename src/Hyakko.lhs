@@ -162,8 +162,8 @@ style language. If it is normal, `fromLiterate` for returns the same list of
 >         fromLiterate xs Nothing = xs
 >         fromLiterate xs _       =
 >           let s  = T.pack . L.unpack $ symbol src
->               r       = "^" ++* (fromJust $ litSymbol src) ++* "\\s?"
->               r1      = L.pack "^\\s*$"
+>               r  = "^" ++* (fromJust $ litSymbol src) ++* "\\s?"
+>               r1 = L.pack "^\\s*$"
 >               (x', y) = if T.unpack x =~ r then
 >                      (replace r x "", False)
 >                      else
