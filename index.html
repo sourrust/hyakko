@@ -40,6 +40,7 @@
 <span class="kw">import</span> <span class="kw">qualified</span> Data.Text.IO <span class="kw">as</span> T
 <span class="kw">import</span> Data.List (sort)
 <span class="kw">import</span> Data.Maybe (fromJust, isNothing)
+<span class="kw">import</span> Data.Monoid
 <span class="kw">import</span> Data.Version (showVersion)
 <span class="kw">import</span> Control.Applicative ((&lt;$&gt;))
 <span class="kw">import</span> Control.Monad (filterM, (&gt;=&gt;), forM, forM_, unless, when)
@@ -93,7 +94,7 @@ generateDocumentation opts xs <span class="fu">=</span> <span class="kw">do</spa
 </code></pre>
 <p>Given a string of source code, parse out eacg block of prose and the code that follows it — by detecting which is which, line by line — then create an individual <strong>section</strong> for it. Each section is Map with <code>docText</code> and <code>codeText</code> properties, and eventuall <code>docsHtml</code> and <code>codeHtml</code> as well.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">inSections ::</span> [<span class="dt">Text</span>] <span class="ot">-&gt;</span> <span class="dt">ByteString</span> <span class="ot">-&gt;</span> <span class="dt">Sections</span>
 inSections xs r <span class="fu">=</span>
-  <span class="kw">let</span> sections <span class="fu">=</span> sectionOff <span class="st">&quot;&quot;</span> <span class="st">&quot;&quot;</span> xs
+  <span class="kw">let</span> sections <span class="fu">=</span> sectionOff mempty mempty xs
   <span class="kw">in</span> <span class="fu">map</span> M.fromList sections
 
   <span class="kw">where</span><span class="ot"> save ::</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> [(<span class="dt">String</span>, <span class="dt">Text</span>)]
@@ -109,17 +110,17 @@ inSections xs r <span class="fu">=</span>
           <span class="kw">in</span> <span class="kw">if</span> line <span class="fu">=~</span> r <span class="fu">&amp;&amp;</span> (<span class="fu">not</span> <span class="fu">$</span> line <span class="fu">=~</span> shebang) <span class="kw">then</span>
                handleDocs code
                <span class="kw">else</span>
-                 sectionOff (code <span class="fu">++.</span> y <span class="fu">++.</span> <span class="st">&quot;\n&quot;</span>) docs ys
+                 sectionOff (code <span class="fu">&lt;&gt;</span> y <span class="fu">&lt;&gt;</span> <span class="st">&quot;\n&quot;</span>) docs ys
 
           <span class="kw">where</span> handleDocs <span class="st">&quot;&quot;</span> <span class="fu">=</span> handleHeaders code (newdocs docs) ys
                 handleDocs _  <span class="fu">=</span> save code docs
-                              <span class="fu">:</span> handleHeaders <span class="st">&quot;&quot;</span> (newdocs <span class="st">&quot;&quot;</span>) ys
+                              <span class="fu">:</span> handleHeaders mempty (newdocs mempty) ys
 
-                newdocs d <span class="fu">=</span> d <span class="fu">++.</span> (replace r y <span class="st">&quot;&quot;</span>) <span class="fu">++.</span> <span class="st">&quot;\n&quot;</span>
+                newdocs d <span class="fu">=</span> d <span class="fu">&lt;&gt;</span> (replace r y mempty) <span class="fu">&lt;&gt;</span> <span class="st">&quot;\n&quot;</span>
 </code></pre>
 <p>If there is a header markup, only for <code>---</code> and <code>===</code>, it will get its own line from the other documentation.</p><pre class="sourceCode"><code class="sourceCode">                handleHeaders c d zs <span class="fu">=</span>
                   <span class="kw">if</span> T.unpack d <span class="fu">=~</span> L.pack <span class="st">&quot;^(---|===)+&quot;</span> <span class="kw">then</span>
-                    save c d <span class="fu">:</span> sectionOff <span class="st">&quot;&quot;</span> <span class="st">&quot;&quot;</span> zs
+                    save c d <span class="fu">:</span> sectionOff mempty mempty zs
                     <span class="kw">else</span>
                       sectionOff c d zs
 </code></pre>
@@ -127,28 +128,28 @@ inSections xs r <span class="fu">=</span>
 parse <span class="kw">Nothing</span> _       <span class="fu">=</span> []
 parse (<span class="kw">Just</span> src) code <span class="fu">=</span>
   inSections (fromLiterate (T.lines code) <span class="fu">$</span> literate src)
-             (<span class="st">&quot;^\\s*&quot;</span> <span class="fu">++*</span> symbol src <span class="fu">++*</span> <span class="st">&quot;\\s?&quot;</span>)
+             (<span class="st">&quot;^\\s*&quot;</span> <span class="fu">&lt;&gt;</span> symbol src <span class="fu">&lt;&gt;</span> <span class="st">&quot;\\s?&quot;</span>)
 </code></pre>
 <p>Transforms a literate style language file into its normal, non-literate style language. If it is normal, <code>fromLiterate</code> for returns the same list of <code>Text</code> that was passed in.</p><pre class="sourceCode"><code class="sourceCode">  <span class="kw">where</span><span class="ot"> fromLiterate ::</span> [<span class="dt">Text</span>] <span class="ot">-&gt;</span> <span class="dt">Maybe</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> [<span class="dt">Text</span>]
         fromLiterate [] _       <span class="fu">=</span> []
         fromLiterate xs <span class="kw">Nothing</span> <span class="fu">=</span> xs
         fromLiterate xs _       <span class="fu">=</span>
           <span class="kw">let</span> s  <span class="fu">=</span> T.pack <span class="fu">.</span> L.unpack <span class="fu">$</span> symbol src
-              r  <span class="fu">=</span> <span class="st">&quot;^&quot;</span> <span class="fu">++*</span> (fromJust <span class="fu">$</span> litSymbol src) <span class="fu">++*</span> <span class="st">&quot;\\s?&quot;</span>
+              r  <span class="fu">=</span> <span class="st">&quot;^&quot;</span> <span class="fu">&lt;&gt;</span> (fromJust <span class="fu">$</span> litSymbol src) <span class="fu">&lt;&gt;</span> <span class="st">&quot;\\s?&quot;</span>
               r1 <span class="fu">=</span> L.pack <span class="st">&quot;^\\s*$&quot;</span>
               fn <span class="fu">=</span> forM xs <span class="fu">$</span> \x <span class="ot">-&gt;</span> <span class="kw">do</span>
                 (ys, isText) <span class="ot">&lt;-</span> get
                 <span class="kw">let</span> hasLitSymbol <span class="fu">=</span> T.unpack x <span class="fu">=~</span> r
 
                 when hasLitSymbol <span class="fu">$</span>
-                  put (ys <span class="fu">++</span> [replace r x <span class="st">&quot;&quot;</span>], <span class="kw">False</span>)
+                  put (ys <span class="fu">++</span> [replace r x mempty], <span class="kw">False</span>)
 </code></pre>
 <p>Inserts a comment symbol and a single space into the documentation line and check if the last line was code and documentation. If the previous line was code and the line is blank or has just whitespace, it returns a blank <code>Text</code> datatype; otherwise it will return just the comment symbol.</p><pre class="sourceCode"><code class="sourceCode">                unless hasLitSymbol <span class="fu">$</span>
                   <span class="kw">case</span> (T.unpack x <span class="fu">=~</span> r1, isText) <span class="kw">of</span>
                     (<span class="kw">True</span>, <span class="kw">True</span>)  <span class="ot">-&gt;</span> put (ys <span class="fu">++</span> [s], <span class="kw">True</span>)
-                    (<span class="kw">True</span>, <span class="kw">False</span>) <span class="ot">-&gt;</span> put (ys <span class="fu">++</span> [T.empty], <span class="kw">False</span>)
-                    (<span class="kw">False</span>, _)    <span class="ot">-&gt;</span> put (ys <span class="fu">++</span> [s <span class="fu">++.</span> <span class="st">&quot; &quot;</span> <span class="fu">++.</span> x], <span class="kw">True</span>)
-          <span class="kw">in</span> <span class="fu">fst</span> <span class="fu">.</span> <span class="fu">snd</span> <span class="fu">$</span> runState fn ([], <span class="kw">True</span>)
+                    (<span class="kw">True</span>, <span class="kw">False</span>) <span class="ot">-&gt;</span> put (ys <span class="fu">++</span> [mempty], <span class="kw">False</span>)
+                    (<span class="kw">False</span>, _)    <span class="ot">-&gt;</span> put (ys <span class="fu">++</span> [s <span class="fu">&lt;&gt;</span> <span class="st">&quot; &quot;</span> <span class="fu">&lt;&gt;</span> x], <span class="kw">True</span>)
+          <span class="kw">in</span> <span class="fu">fst</span> <span class="fu">.</span> <span class="fu">snd</span> <span class="fu">$</span> runState fn (mempty, <span class="kw">True</span>)
 </code></pre>
 <p>Highlights the current file of code, using <strong>Kate</strong>, and outputs the the highlighted html to its caller.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">highlight ::</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="dt">Sections</span> <span class="ot">-&gt;</span> [<span class="dt">Text</span>]
 highlight src section <span class="fu">=</span>
@@ -179,8 +180,9 @@ generateHTML opts src section <span class="fu">=</span> <span class="kw">do</spa
       isHeader    <span class="fu">=</span> header <span class="fu">=~</span> L.pack <span class="st">&quot;^&lt;(h\\d)&quot;</span>
       count       <span class="fu">=</span> [<span class="dv">0</span> <span class="fu">..</span> (<span class="fu">length</span> section) <span class="fu">-</span> <span class="dv">1</span>]
       (h, count&#39;) <span class="fu">=</span> <span class="kw">if</span> isHeader <span class="kw">then</span>
-        <span class="kw">let</span> layout&#39; <span class="fu">=</span> <span class="kw">if</span> isNothing maybeLayout <span class="kw">then</span> <span class="st">&quot;&quot;</span>
-                      <span class="kw">else</span> fromJust maybeLayout
+        <span class="kw">let</span> layout&#39; <span class="fu">=</span> <span class="kw">if</span> isNothing maybeLayout
+                        <span class="kw">then</span> mempty
+                        <span class="kw">else</span> fromJust maybeLayout
         <span class="kw">in</span> ( [(<span class="st">&quot;header&quot;</span>, header)]
            , (<span class="kw">if</span> layout&#39; <span class="fu">==</span> <span class="st">&quot;linear&quot;</span> <span class="kw">then</span> <span class="fu">tail</span> <span class="kw">else</span> <span class="fu">id</span>) count)
         <span class="kw">else</span>
@@ -204,19 +206,11 @@ getHeader htmlheader <span class="fu">=</span>
   <span class="kw">in</span> header
 </code></pre>
 <h2 id="helpers-setup">Helpers &amp; Setup</h2>
-<p>Infix functions for easier concatenation with Text and ByteString.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">(++.) ::</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span>
-(<span class="fu">++.</span>) <span class="fu">=</span> T.append
-<span class="ot">{-# INLINE (++.) #-}</span>
-
-<span class="ot">(++*) ::</span> <span class="dt">ByteString</span> <span class="ot">-&gt;</span> <span class="dt">ByteString</span> <span class="ot">-&gt;</span> <span class="dt">ByteString</span>
-(<span class="fu">++*</span>) <span class="fu">=</span> L.append
-<span class="ot">{-# INLINE (++*) #-}</span>
-</code></pre>
 <p>Simpler type signatuted regex replace function.</p><pre class="sourceCode"><code class="sourceCode"><span class="ot">replace ::</span> <span class="dt">ByteString</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span>
 replace reg x y <span class="fu">=</span>
   <span class="kw">let</span> str  <span class="fu">=</span> T.unpack x
       (_, _, rp) <span class="fu">=</span> str <span class="fu">=~</span><span class="ot"> reg ::</span> (<span class="dt">String</span>, <span class="dt">String</span>, <span class="dt">String</span>)
-  <span class="kw">in</span> y <span class="fu">++.</span> (T.pack rp)
+  <span class="kw">in</span> y <span class="fu">&lt;&gt;</span> (T.pack rp)
 
 <span class="ot">readLanguageFile ::</span> <span class="dt">IO</span> <span class="dt">ByteString</span>
 readLanguageFile <span class="fu">=</span> getDataFileName <span class="st">&quot;resources/languages.json&quot;</span>
@@ -289,12 +283,12 @@ copyDirectory opts dir <span class="fu">=</span> <span class="kw">do</span>
 </code></pre>
 <p>Create all the directories needed to put future files into.</p><pre class="sourceCode"><code class="sourceCode">  forM_ dirs <span class="fu">$</span> \x <span class="ot">-&gt;</span> <span class="kw">do</span>
     <span class="kw">let</span> x&#39;   <span class="fu">=</span> T.pack x
-        dir&#39; <span class="fu">=</span> T.unpack <span class="fu">$</span> T.replace oldLocation <span class="st">&quot;&quot;</span> x&#39;
+        dir&#39; <span class="fu">=</span> T.unpack <span class="fu">$</span> T.replace oldLocation mempty x&#39;
     createDirectoryIfMissing <span class="kw">False</span> <span class="fu">$</span> dirout <span class="fu">&lt;/&gt;</span> dir&#39;
 </code></pre>
 <p>Copy all the files into the recently created directories.</p><pre class="sourceCode"><code class="sourceCode">  forM_ files <span class="fu">$</span> \x <span class="ot">-&gt;</span> <span class="kw">do</span>
     <span class="kw">let</span> x&#39;   <span class="fu">=</span> T.pack x
-        file <span class="fu">=</span> dirout <span class="fu">&lt;/&gt;</span> (T.unpack <span class="fu">$</span> T.replace oldLocation <span class="st">&quot;&quot;</span> x&#39;)
+        file <span class="fu">=</span> dirout <span class="fu">&lt;/&gt;</span> (T.unpack <span class="fu">$</span> T.replace oldLocation mempty x&#39;)
     copyFile x file
 </code></pre>
 <h2 id="configuration">Configuration</h2>
