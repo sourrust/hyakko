@@ -47,6 +47,7 @@ file](https://github.com/sourrust/hyakko/blob/master/resources/languages.json).
 > import qualified Data.Text.IO as T
 > import Data.List (sort)
 > import Data.Maybe (fromJust, isNothing)
+> import Data.Monoid
 > import Data.Version (showVersion)
 > import Control.Applicative ((<$>))
 > import Control.Monad (filterM, (>=>), forM, forM_, unless, when)
@@ -128,13 +129,13 @@ individual **section** for it. Each section is Map with `docText` and
 >           in if line =~ r && (not $ line =~ shebang) then
 >                handleDocs code
 >                else
->                  sectionOff (code ++. y ++. "\n") docs ys
+>                  sectionOff (code <> y <> "\n") docs ys
 
 >           where handleDocs "" = handleHeaders code (newdocs docs) ys
 >                 handleDocs _  = save code docs
 >                               : handleHeaders "" (newdocs "") ys
 
->                 newdocs d = d ++. (replace r y "") ++. "\n"
+>                 newdocs d = d <> (replace r y "") <> "\n"
 
 If there is a header markup, only for `---` and `===`, it will get its own
 line from the other documentation.
@@ -153,7 +154,7 @@ shebangs — then feed it to `inSections`, and finally return the results.
 > parse Nothing _       = []
 > parse (Just src) code =
 >   inSections (fromLiterate (T.lines code) $ literate src)
->              ("^\\s*" ++* symbol src ++* "\\s?")
+>              ("^\\s*" <> symbol src <> "\\s?")
 
 Transforms a literate style language file into its normal, non-literate
 style language. If it is normal, `fromLiterate` for returns the same list of
@@ -164,7 +165,7 @@ style language. If it is normal, `fromLiterate` for returns the same list of
 >         fromLiterate xs Nothing = xs
 >         fromLiterate xs _       =
 >           let s  = T.pack . L.unpack $ symbol src
->               r  = "^" ++* (fromJust $ litSymbol src) ++* "\\s?"
+>               r  = "^" <> (fromJust $ litSymbol src) <> "\\s?"
 >               r1 = L.pack "^\\s*$"
 >               fn = forM xs $ \x -> do
 >                 (ys, isText) <- get
@@ -182,7 +183,7 @@ datatype; otherwise it will return just the comment symbol.
 >                   case (T.unpack x =~ r1, isText) of
 >                     (True, True)  -> put (ys ++ [s], True)
 >                     (True, False) -> put (ys ++ [T.empty], False)
->                     (False, _)    -> put (ys ++ [s ++. " " ++. x], True)
+>                     (False, _)    -> put (ys ++ [s <> " " <> x], True)
 >           in fst . snd $ runState fn ([], True)
 
 Highlights the current file of code, using **Kate**, and outputs the the
@@ -255,23 +256,13 @@ header at the top of the file.
 Helpers & Setup
 ---------------
 
-Infix functions for easier concatenation with Text and ByteString.
-
-> (++.) :: Text -> Text -> Text
-> (++.) = T.append
-> {-# INLINE (++.) #-}
-
-> (++*) :: ByteString -> ByteString -> ByteString
-> (++*) = L.append
-> {-# INLINE (++*) #-}
-
 Simpler type signatuted regex replace function.
 
 > replace :: ByteString -> Text -> Text -> Text
 > replace reg x y =
 >   let str  = T.unpack x
 >       (_, _, rp) = str =~ reg :: (String, String, String)
->   in y ++. (T.pack rp)
+>   in y <> (T.pack rp)
 
 > readLanguageFile :: IO ByteString
 > readLanguageFile = getDataFileName "resources/languages.json"
