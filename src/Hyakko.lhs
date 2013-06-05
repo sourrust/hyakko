@@ -177,11 +177,12 @@ check if the last line was code and documentation. If the previous line was
 code and the line is blank or has just whitespace, it returns a blank `Text`
 datatype; otherwise it will return just the comment symbol.
 
->           where insert :: Bool -> Bool -> Text -> (Text, Bool)
->                 insert True True _  = (T.pack . L.unpack
->                                       $ symbol src, True)
->                 insert True False _ = ("", False)
->                 insert False _ y    = (y, True)
+>                 unless hasLitSymbol $
+>                   case (T.unpack x =~ r1, isText) of
+>                     (True, True)  -> put (ys ++ [s], True)
+>                     (True, False) -> put (ys ++ [T.empty], False)
+>                     (False, _)    -> put (ys ++ [s ++. " " ++. x], True)
+>           in fst . snd $ runState fn ([], True)
 
 Highlights the current file of code, using **Kate**, and outputs the the
 highlighted html to its caller.
