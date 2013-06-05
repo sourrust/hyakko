@@ -49,7 +49,8 @@ file](https://github.com/sourrust/hyakko/blob/master/resources/languages.json).
 > import Data.Maybe (fromJust, isNothing)
 > import Data.Version (showVersion)
 > import Control.Applicative ((<$>))
-> import Control.Monad (filterM, (>=>), forM, forM_, unless)
+> import Control.Monad (filterM, (>=>), forM, forM_, unless, when)
+> import Control.Monad.State.Strict
 > import qualified Text.Blaze.Html as B
 > import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
 > import qualified Text.Highlighting.Kate as K
@@ -150,37 +151,38 @@ shebangs — then feed it to `inSections`, and finally return the results.
 > parse :: Maybe Language -> Text -> Sections
 > parse Nothing _       = []
 > parse (Just src) code =
->   inSections (fromLiterate (T.lines code) (literate src) True)
+>   inSections (fromLiterate (T.lines code) $ literate src)
 >              ("^\\s*" ++* symbol src ++* "\\s?")
 
 Transforms a literate style language file into its normal, non-literate
 style language. If it is normal, `fromLiterate` for returns the same list of
 `Text` that was passed in.
 
->   where fromLiterate :: [Text] -> Maybe Bool -> Bool -> [Text]
->         fromLiterate [] _ _            = []
->         fromLiterate xs Nothing _      = xs
->         fromLiterate (x:xs) lit isText =
->           let s       = symbol src
->               r       = "^" ++* (fromJust $ litSymbol src) ++* "\\s?"
->               r1      = L.pack "^\\s*$"
->               (x', y) = if T.unpack x =~ r then
->                      (replace r x "", False)
->                      else
->                        insert (T.unpack x =~ r1) isText
->                          ((T.pack $ L.unpack s)  ++. " " ++. x)
->           in x': fromLiterate xs lit y
+>   where fromLiterate :: [Text] -> Maybe Bool -> [Text]
+>         fromLiterate [] _       = []
+>         fromLiterate xs Nothing = xs
+>         fromLiterate xs _       =
+>           let s  = T.pack . L.unpack $ symbol src
+>               r  = "^" ++* (fromJust $ litSymbol src) ++* "\\s?"
+>               r1 = L.pack "^\\s*$"
+>               fn = forM xs $ \x -> do
+>                 (ys, isText) <- get
+>                 let hasLitSymbol = T.unpack x =~ r
+
+>                 when hasLitSymbol $
+>                   put (ys ++ [replace r x ""], False)
 
 Inserts a comment symbol and a single space into the documentation line and
 check if the last line was code and documentation. If the previous line was
 code and the line is blank or has just whitespace, it returns a blank `Text`
 datatype; otherwise it will return just the comment symbol.
 
->           where insert :: Bool -> Bool -> Text -> (Text, Bool)
->                 insert True True _  = (T.pack . L.unpack
->                                       $ symbol src, True)
->                 insert True False _ = ("", False)
->                 insert False _ y    = (y, True)
+>                 unless hasLitSymbol $
+>                   case (T.unpack x =~ r1, isText) of
+>                     (True, True)  -> put (ys ++ [s], True)
+>                     (True, False) -> put (ys ++ [T.empty], False)
+>                     (False, _)    -> put (ys ++ [s ++. " " ++. x], True)
+>           in fst . snd $ runState fn ([], True)
 
 Highlights the current file of code, using **Kate**, and outputs the the
 highlighted html to its caller.

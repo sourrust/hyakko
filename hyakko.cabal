@@ -74,7 +74,8 @@ Executable hyakko
                   highlighting-kate >= 0.5,
                   blaze-html >= 0.5,
                   cmdargs >= 0.10,
-                  aeson >= 0.6
+                  aeson >= 0.6,
+                  mtl >= 2.1
   hs-source-dirs: src
   ghc-options:    -O2 -Wall
   main-is:        Hyakko.lhs
