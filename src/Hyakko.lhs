@@ -192,7 +192,7 @@ highlighted html to its caller.
 > highlight src section =
 >   let language = fromJust $ getLanguage src
 >       langName = L.unpack $ name_ language
->       input    = map (\x -> T.unpack $ x M.! "codeText") section
+>       input    = map (T.unpack . (M.! "codeText")) section
 >       html     = B.toHtml . K.formatHtmlBlock K.defaultFormatOpts
 >                           . K.highlightAs langName
 >       htmlText = T.pack . L.unpack . renderHtml . html
