@@ -96,13 +96,14 @@ printing them out in an HTML template.
 >   forM_ xs $ \x -> do
 >     code <- T.readFile x
 >     let sections  = parse (getLanguage x) code
->     if null sections then
+>         noSects   = null sections
+>     when noSects $
 >       putStrLn $ "hyakko doesn't support the language extension "
 >                ++ takeExtension x
->       else do
->         let highlighted = highlight x sections
->             y           = mapSections sections highlighted
->         generateHTML opts' x y
+>     unless noSects $ do
+>       let highlighted = highlight x sections
+>           y           = mapSections sections highlighted
+>       generateHTML opts' x y
 
 Given a string of source code, parse out eacg block of prose and the code
 that follows it — by detecting which is which, line by line — then create an
@@ -191,7 +192,7 @@ highlighted html to its caller.
 > highlight src section =
 >   let language = fromJust $ getLanguage src
 >       langName = L.unpack $ name_ language
->       input    = map (\x -> T.unpack $ x M.! "codeText") section
+>       input    = map (T.unpack . (M.! "codeText")) section
 >       html     = B.toHtml . K.formatHtmlBlock K.defaultFormatOpts
 >                           . K.highlightAs langName
 >       htmlText = T.pack . L.unpack . renderHtml . html
