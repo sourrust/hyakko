@@ -47,6 +47,7 @@ file](https://github.com/sourrust/hyakko/blob/master/resources/languages.json).
 > import qualified Data.Text.IO as T
 > import Data.List (sort)
 > import Data.Maybe (fromJust, isNothing)
+> import Data.Monoid
 > import Data.Version (showVersion)
 > import Control.Applicative ((<$>))
 > import Control.Monad (filterM, (>=>), forM, forM_, unless, when)
@@ -112,7 +113,7 @@ individual **section** for it. Each section is Map with `docText` and
 
 > inSections :: [Text] -> ByteString -> Sections
 > inSections xs r =
->   let sections = sectionOff "" "" xs
+>   let sections = sectionOff mempty mempty xs
 >   in map M.fromList sections
 
 >   where save :: Text -> Text -> [(String, Text)]
@@ -128,20 +129,20 @@ individual **section** for it. Each section is Map with `docText` and
 >           in if line =~ r && (not $ line =~ shebang) then
 >                handleDocs code
 >                else
->                  sectionOff (code ++. y ++. "\n") docs ys
+>                  sectionOff (code <> y <> "\n") docs ys
 
 >           where handleDocs "" = handleHeaders code (newdocs docs) ys
 >                 handleDocs _  = save code docs
->                               : handleHeaders "" (newdocs "") ys
+>                               : handleHeaders mempty (newdocs mempty) ys
 
->                 newdocs d = d ++. (replace r y "") ++. "\n"
+>                 newdocs d = d <> (replace r y mempty) <> "\n"
 
 If there is a header markup, only for `---` and `===`, it will get its own
 line from the other documentation.
 
 >                 handleHeaders c d zs =
 >                   if T.unpack d =~ L.pack "^(---|===)+" then
->                     save c d : sectionOff "" "" zs
+>                     save c d : sectionOff mempty mempty zs
 >                     else
 >                       sectionOff c d zs
 
@@ -153,7 +154,7 @@ shebangs — then feed it to `inSections`, and finally return the results.
 > parse Nothing _       = []
 > parse (Just src) code =
 >   inSections (fromLiterate (T.lines code) $ literate src)
->              ("^\\s*" ++* symbol src ++* "\\s?")
+>              ("^\\s*" <> symbol src <> "\\s?")
 
 Transforms a literate style language file into its normal, non-literate
 style language. If it is normal, `fromLiterate` for returns the same list of
@@ -164,14 +165,14 @@ style language. If it is normal, `fromLiterate` for returns the same list of
 >         fromLiterate xs Nothing = xs
 >         fromLiterate xs _       =
 >           let s  = T.pack . L.unpack $ symbol src
->               r  = "^" ++* (fromJust $ litSymbol src) ++* "\\s?"
+>               r  = "^" <> (fromJust $ litSymbol src) <> "\\s?"
 >               r1 = L.pack "^\\s*$"
 >               fn = forM xs $ \x -> do
 >                 (ys, isText) <- get
 >                 let hasLitSymbol = T.unpack x =~ r
 
 >                 when hasLitSymbol $
->                   put (ys ++ [replace r x ""], False)
+>                   put (ys ++ [replace r x mempty], False)
 
 Inserts a comment symbol and a single space into the documentation line and
 check if the last line was code and documentation. If the previous line was
@@ -181,9 +182,9 @@ datatype; otherwise it will return just the comment symbol.
 >                 unless hasLitSymbol $
 >                   case (T.unpack x =~ r1, isText) of
 >                     (True, True)  -> put (ys ++ [s], True)
->                     (True, False) -> put (ys ++ [T.empty], False)
->                     (False, _)    -> put (ys ++ [s ++. " " ++. x], True)
->           in fst . snd $ runState fn ([], True)
+>                     (True, False) -> put (ys ++ [mempty], False)
+>                     (False, _)    -> put (ys ++ [s <> " " <> x], True)
+>           in fst . snd $ runState fn (mempty, True)
 
 Highlights the current file of code, using **Kate**, and outputs the the
 highlighted html to its caller.
@@ -225,8 +226,9 @@ template found in `resources/linear/hyakko.html` or
 >       isHeader    = header =~ L.pack "^<(h\\d)"
 >       count       = [0 .. (length section) - 1]
 >       (h, count') = if isHeader then
->         let layout' = if isNothing maybeLayout then ""
->                       else fromJust maybeLayout
+>         let layout' = if isNothing maybeLayout
+>                         then mempty
+>                         else fromJust maybeLayout
 >         in ( [("header", header)]
 >            , (if layout' == "linear" then tail else id) count)
 >         else
@@ -255,23 +257,13 @@ header at the top of the file.
 Helpers & Setup
 ---------------
 
-Infix functions for easier concatenation with Text and ByteString.
-
-> (++.) :: Text -> Text -> Text
-> (++.) = T.append
-> {-# INLINE (++.) #-}
-
-> (++*) :: ByteString -> ByteString -> ByteString
-> (++*) = L.append
-> {-# INLINE (++*) #-}
-
 Simpler type signatuted regex replace function.
 
 > replace :: ByteString -> Text -> Text -> Text
 > replace reg x y =
 >   let str  = T.unpack x
 >       (_, _, rp) = str =~ reg :: (String, String, String)
->   in y ++. (T.pack rp)
+>   in y <> (T.pack rp)
 
 > readLanguageFile :: IO ByteString
 > readLanguageFile = getDataFileName "resources/languages.json"
@@ -369,14 +361,14 @@ Create all the directories needed to put future files into.
 
 >   forM_ dirs $ \x -> do
 >     let x'   = T.pack x
->         dir' = T.unpack $ T.replace oldLocation "" x'
+>         dir' = T.unpack $ T.replace oldLocation mempty x'
 >     createDirectoryIfMissing False $ dirout </> dir'
 
 Copy all the files into the recently created directories.
 
 >   forM_ files $ \x -> do
 >     let x'   = T.pack x
->         file = dirout </> (T.unpack $ T.replace oldLocation "" x')
+>         file = dirout </> (T.unpack $ T.replace oldLocation mempty x')
 >     copyFile x file
 
 Configuration
