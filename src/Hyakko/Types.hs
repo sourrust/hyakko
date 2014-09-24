@@ -4,7 +4,6 @@ module Hyakko.Types where
 
 import Control.Applicative ((<$>), (<*>), empty)
 import Data.Aeson
-import Data.ByteString.Lazy (ByteString)
 import Data.HashMap.Strict (HashMap)
 import Data.Text (Text)
 import System.Console.CmdArgs
@@ -19,10 +18,10 @@ type Languages = HashMap String Language
 -- Better data type for language info — compared to the `Object` data type
 -- in `Aeson`.
 data Language =
-  Language { name_     :: ByteString
-           , symbol    :: ByteString
+  Language { name_     :: Text
+           , symbol    :: Text
            , literate  :: Maybe Bool
-           , litSymbol :: Maybe ByteString
+           , litSymbol :: Maybe Text
            }
 
 instance FromJSON Language where
