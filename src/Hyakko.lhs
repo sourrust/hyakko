@@ -38,7 +38,7 @@ file](https://github.com/sourrust/hyakko/blob/master/resources/languages.json).
 > import Hyakko.Text.Templates
 > import Hyakko.Types
 
-> import Data.Aeson (decode')
+> import Data.Aeson (decode', Value(..))
 > import qualified Data.HashMap.Strict as M
 > import Data.ByteString.Lazy.Char8 (ByteString)
 > import qualified Data.ByteString.Lazy.Char8 as L
@@ -111,7 +111,7 @@ that follows it — by detecting which is which, line by line — then create an
 individual **section** for it. Each section is Map with `docText` and
 `codeText` properties, and eventuall `docsHtml` and `codeHtml` as well.
 
-> inSections :: [Text] -> ByteString -> Sections
+> inSections :: [Text] -> Text -> Sections
 > inSections xs r =
 >   let sections = sectionOff mempty mempty xs
 >   in map M.fromList sections
@@ -126,7 +126,8 @@ individual **section** for it. Each section is Map with `docText` and
 >         sectionOff code docs (y:ys) =
 >           let line    = T.unpack y
 >               shebang = L.pack "(^#![/]|^\\s*#\\{)"
->           in if line =~ r && (not $ line =~ shebang) then
+>               r'      = L.pack $ T.unpack r
+>           in if line =~ r' && (not $ line =~ shebang) then
 >                handleDocs code
 >                else
 >                  sectionOff (code <> y <> "\n") docs ys
@@ -164,12 +165,12 @@ style language. If it is normal, `fromLiterate` for returns the same list of
 >         fromLiterate [] _       = []
 >         fromLiterate xs Nothing = xs
 >         fromLiterate xs _       =
->           let s  = T.pack . L.unpack $ symbol src
+>           let s  = symbol src
 >               r  = "^" <> (fromJust $ litSymbol src) <> "\\s?"
 >               r1 = L.pack "^\\s*$"
 >               fn = forM xs $ \x -> do
 >                 (ys, isText) <- get
->                 let hasLitSymbol = T.unpack x =~ r
+>                 let hasLitSymbol = T.unpack x =~ (L.pack $ T.unpack r)
 
 >                 when hasLitSymbol $
 >                   put (ys ++ [replace r x mempty], False)
@@ -192,7 +193,7 @@ highlighted html to its caller.
 > highlight :: FilePath -> Sections -> [Text]
 > highlight src section =
 >   let language = fromJust $ getLanguage src
->       langName = L.unpack $ name_ language
+>       langName = T.unpack $ name_ language
 >       input    = map (T.unpack . (M.! "codeText")) section
 >       html     = B.toHtml . K.formatHtmlBlock K.defaultFormatOpts
 >                           . K.highlightAs langName
@@ -226,15 +227,13 @@ template found in `resources/linear/hyakko.html` or
 >       isHeader    = header =~ L.pack "^<(h\\d)"
 >       count       = [0 .. (length section) - 1]
 >       (h, count') = if isHeader then
->         let layout' = if isNothing maybeLayout
->                         then mempty
->                         else fromJust maybeLayout
+>         let layout' = maybe mempty id maybeLayout
 >         in ( [("header", header)]
 >            , (if layout' == "linear" then tail else id) count)
 >         else
 >           ([("header", header)], count)
 >   source <- sources $ dirOrFiles opts
->   html <- hyakkoTemplate opts $ concat
+>   html <- hyakkoTemplate opts . varListToJSON $ concat
 >     [ [("title", if isHeader then getHeader header else title)]
 >     , h
 >     , cssTemplate opts
@@ -259,10 +258,11 @@ Helpers & Setup
 
 Simpler type signatuted regex replace function.
 
-> replace :: ByteString -> Text -> Text -> Text
+> replace :: Text -> Text -> Text -> Text
 > replace reg x y =
->   let str  = T.unpack x
->       (_, _, rp) = str =~ reg :: (String, String, String)
+>   let str        = T.unpack x
+>       reg'       = L.pack $ T.unpack reg
+>       (_, _, rp) = str =~ reg' :: (String, String, String)
 >   in y <> (T.pack rp)
 
 > readLanguageFile :: IO ByteString
@@ -306,10 +306,10 @@ css and html or a custom css and html. Then move it to the output directory.
 
 Create the template that we will use to generate the Hyakko HTML page.
 
-> hyakkoTemplate :: Hyakko -> [(String, String)] -> IO Text
+> hyakkoTemplate :: Hyakko -> Value -> IO Text
 > hyakkoTemplate opts var = do
 >   content <- hyakkoFile "html" opts
->   return . T.pack . renderTemplate var $ T.unpack content
+>   return . T.pack $ renderTemplate' (T.unpack content) var
 
 The CSS styles we'd like to apply to the documentation.
 
