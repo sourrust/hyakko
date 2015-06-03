@@ -1,3 +1,14 @@
+## [0.4.0] - 2013-04-26
+
+### Added
+
+* Support for pandoc greater than version 1.10
+* Support for unicode characters
+
+### Changed
+
+* Functions using `ByteString` to `Text`
+
 ## [0.3.0] - 2012-04-03
 
 ### Fixed
@@ -34,5 +45,6 @@
 * Highlighting code blocks with pygments
 * Parser to separate out prose from code
 
+[0.4.0]: https://github.com/sourrust/hyakko/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/sourrust/hyakko/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sourrust/hyakko/compare/1362ad0...v0.2.0
