@@ -50,6 +50,7 @@ data-files:
                   resources/parallel/public/fonts/novecento-bold.ttf
                   resources/parallel/public/fonts/novecento-bold.woff
 extra-source-files:
+                  CHANGELOG.md
                   README
                   src/Hyakko/Text/Markdown.hs
                   src/Hyakko/Text/Templates.hs
