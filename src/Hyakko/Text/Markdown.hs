@@ -10,7 +10,8 @@ import Data.Text (Text, pack)
 -- Function for translating Markdown to HTML since `Pandoc` has several
 -- different generators for other markup languages.
 toHTML :: String -> Text
-toHTML = pack . writeHTMLStr . parse
-  where parse = readMarkdown def
-        writeHTMLStr = writeHtmlString def
+toHTML string =
+  let parsedOutput = readMarkdown def string
+      emptyText _  = empty
+  in either emptyText (pack . writeHtmlString def) parsedOutput
 {-# INLINE toHTML #-}
