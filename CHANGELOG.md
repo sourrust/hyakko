@@ -1,3 +1,13 @@
+## [0.3.0] - 2012-04-03
+
+### Fixed
+
+* Function name typo `ensurePar` to `ensurePair`
+
+### Changed
+
+* Functions using `String` to `ByteString`
+
 ## [0.2.0] - 2011-10-26
 
 ### Added
@@ -24,4 +34,5 @@
 * Highlighting code blocks with pygments
 * Parser to separate out prose from code
 
+[0.3.0]: https://github.com/sourrust/hyakko/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sourrust/hyakko/compare/1362ad0...v0.2.0
