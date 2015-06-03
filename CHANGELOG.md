@@ -1,3 +1,51 @@
+## [0.6.7] - 2015-06-02
+
+### Added
+
+* Support for pandoc greater than version 1.14
+
+## [0.6.6] - 2014-09-24
+
+### Changed
+
+* Dependencies to be up to date
+
+## [0.6.5] - 2013-05-14
+
+### Fixed
+
+* Links to section IDs in parallel layout
+* Exclusion of shebangs within files
+
+## [0.6.4] - 2013-05-11
+
+### Fixed
+
+* Data directory searching with the cabal package
+
+## [0.6.3] - 2013-05-09
+
+### Fixed
+
+* Title headers when left empty
+
+## [0.6.2] - 2013-05-07
+
+### Changed
+
+* Use of `Map` to `HashMap`
+* Store language definitions in a separate JSON file
+
+## [0.6.1] - 2013-05-06
+
+### Fixed
+
+* Multiple CSS inclusions in template files
+
+### Removed
+
+* Explicit normalize.css file in linear template
+
 ## [0.6.0] - 2013-05-05
 
 ### Added
@@ -70,6 +118,13 @@
 * Highlighting code blocks with pygments
 * Parser to separate out prose from code
 
+[0.6.7]: https://github.com/sourrust/hyakko/compare/v0.6.6...v0.6.7
+[0.6.6]: https://github.com/sourrust/hyakko/compare/v0.6.5...v0.6.6
+[0.6.5]: https://github.com/sourrust/hyakko/compare/v0.6.4...v0.6.5
+[0.6.4]: https://github.com/sourrust/hyakko/compare/v0.6.3...v0.6.4
+[0.6.3]: https://github.com/sourrust/hyakko/compare/v0.6.2...v0.6.3
+[0.6.2]: https://github.com/sourrust/hyakko/compare/v0.6.1...v0.6.2
+[0.6.1]: https://github.com/sourrust/hyakko/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/sourrust/hyakko/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/sourrust/hyakko/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/sourrust/hyakko/compare/v0.3.0...v0.4.0
