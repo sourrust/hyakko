@@ -1,11 +1,7 @@
 module Hyakko.Text.Markdown (toHTML) where
 
-import Text.Pandoc ( readMarkdown
-                   , writeHtmlString
-                   , def
-                   )
-
-import Data.Text (Text, pack)
+import Data.Text (Text, pack, empty)
+import Text.Pandoc (readMarkdown, writeHtmlString, def)
 
 -- Function for translating Markdown to HTML since `Pandoc` has several
 -- different generators for other markup languages.
