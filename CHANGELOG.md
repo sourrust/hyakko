@@ -1,3 +1,18 @@
+## [0.6.0] - 2013-05-05
+
+### Added
+
+* cmdags for command line argument parsing
+* Help flag in CLI
+* Version flag in CLI
+* Error message when no files are put into the CLI
+* More than one template -- linear and parallel
+
+### Changed
+
+* Headers, both h1 and h2, are on their own separate line
+* Recursive directory to include subdirectory as well
+
 ## [0.5.0] - 2013-04-30
 
 ### Added
@@ -55,6 +70,7 @@
 * Highlighting code blocks with pygments
 * Parser to separate out prose from code
 
+[0.6.0]: https://github.com/sourrust/hyakko/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/sourrust/hyakko/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/sourrust/hyakko/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/sourrust/hyakko/compare/v0.2.0...v0.3.0
