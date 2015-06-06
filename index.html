@@ -131,10 +131,10 @@ parse (<span class="dt">Just</span> src) code <span class="fu">=</span>
   inSections (fromLiterate (T.lines code) <span class="fu">$</span> literate src)
              (<span class="st">&quot;^\\s*&quot;</span> <span class="fu">&lt;&gt;</span> symbol src <span class="fu">&lt;&gt;</span> <span class="st">&quot;\\s?&quot;</span>)
 </code></pre></div>
-<p>Transforms a literate style language file into its normal, non-literate style language. If it is normal, <code>fromLiterate</code> for returns the same list of <code>Text</code> that was passed in.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode">  <span class="kw">where</span><span class="ot"> fromLiterate ::</span> [<span class="dt">Text</span>] <span class="ot">-&gt;</span> <span class="dt">Maybe</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> [<span class="dt">Text</span>]
-        fromLiterate [] _       <span class="fu">=</span> []
-        fromLiterate xs <span class="dt">Nothing</span> <span class="fu">=</span> xs
-        fromLiterate xs _       <span class="fu">=</span>
+<p>Transforms a literate style language file into its normal, non-literate style language. If it is normal, <code>fromLiterate</code> for returns the same list of <code>Text</code> that was passed in.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode">  <span class="kw">where</span><span class="ot"> fromLiterate ::</span> [<span class="dt">Text</span>] <span class="ot">-&gt;</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> [<span class="dt">Text</span>]
+        fromLiterate [] _     <span class="fu">=</span> []
+        fromLiterate xs <span class="dt">False</span> <span class="fu">=</span> xs
+        fromLiterate xs <span class="dt">True</span>  <span class="fu">=</span>
           <span class="kw">let</span> s  <span class="fu">=</span> symbol src
               r  <span class="fu">=</span> <span class="st">&quot;^&quot;</span> <span class="fu">&lt;&gt;</span> (fromJust <span class="fu">$</span> litSymbol src) <span class="fu">&lt;&gt;</span> <span class="st">&quot;\\s?&quot;</span>
               r1 <span class="fu">=</span> L.pack <span class="st">&quot;^\\s*$&quot;</span>
