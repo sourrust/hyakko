@@ -20,7 +20,7 @@ type Languages = HashMap String Language
 data Language =
   Language { name_     :: Text
            , symbol    :: Text
-           , literate  :: Maybe Bool
+           , literate  :: Bool
            , litSymbol :: Maybe Text
            }
 
@@ -28,7 +28,7 @@ instance FromJSON Language where
   parseJSON (Object o) = Language
                      <$> o .:  "name"
                      <*> o .:  "symbol"
-                     <*> o .:? "literate"
+                     <*> o .:? "literate" .!= False
                      <*> o .:? "litSymbol"
   parseJSON _          = empty
 
