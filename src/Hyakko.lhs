@@ -161,10 +161,10 @@ Transforms a literate style language file into its normal, non-literate
 style language. If it is normal, `fromLiterate` for returns the same list of
 `Text` that was passed in.
 
->   where fromLiterate :: [Text] -> Maybe Bool -> [Text]
->         fromLiterate [] _       = []
->         fromLiterate xs Nothing = xs
->         fromLiterate xs _       =
+>   where fromLiterate :: [Text] -> Bool -> [Text]
+>         fromLiterate [] _     = []
+>         fromLiterate xs False = xs
+>         fromLiterate xs True  =
 >           let s  = symbol src
 >               r  = "^" <> (fromJust $ litSymbol src) <> "\\s?"
 >               r1 = L.pack "^\\s*$"
