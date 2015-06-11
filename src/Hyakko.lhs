@@ -190,9 +190,9 @@ datatype; otherwise it will return just the comment symbol.
 Highlights the current file of code, using **Kate**, and outputs the the
 highlighted html to its caller.
 
-> highlight :: FilePath -> Sections -> [Text]
-> highlight src section =
->   let language = fromJust $ getLanguage src
+> highlight :: Maybe Language -> Sections -> [Text]
+> highlight language' section =
+>   let language = fromJust language'
 >       langName = T.unpack $ name_ language
 >       input    = map (T.unpack . (M.! "codeText")) section
 >       html     = B.toHtml . K.formatHtmlBlock K.defaultFormatOpts
