@@ -1,3 +1,9 @@
+## [Unreleased][unreleased]
+
+### Added
+
+* CLI option `languages` for custom languages.json
+
 ## [0.6.7] - 2015-06-02
 
 ### Added
@@ -118,6 +124,7 @@
 * Highlighting code blocks with pygments
 * Parser to separate out prose from code
 
+[unreleased]: https://github.com/sourrust/hyakko/compare/v0.6.7...HEAD
 [0.6.7]: https://github.com/sourrust/hyakko/compare/v0.6.6...v0.6.7
 [0.6.6]: https://github.com/sourrust/hyakko/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/sourrust/hyakko/compare/v0.6.4...v0.6.5
