@@ -86,9 +86,11 @@ printing them out in an HTML template.
 >   putStrLn "hyakko: no files or options given (try --help)"
 > generateDocumentation opts xs = do
 >   dataDir <- getDataDir
->   let opts'  = configHyakko opts dataDir
->       dirout = output opts'
->   style <- hyakkoStyles opts'
+>   let opts'    = configHyakko opts dataDir
+>       dirout   = output opts'
+>       langFile = languages opts'
+>   style    <- hyakkoStyles opts'
+>   langList <- decodeCustomLanguages langFile
 >   T.writeFile (dirout </> "hyakko.css") style
 >   unless (isNothing $ layout opts') $ do
 >     let layoutDir = fromJust $ layout opts'
@@ -96,13 +98,14 @@ printing them out in an HTML template.
 >                                   </> "public"
 >   forM_ xs $ \x -> do
 >     code <- T.readFile x
->     let sections  = parse (getLanguage x) code
+>     let language  = maybe (getLanguage x) (getLanguage' x) langList
+>         sections  = parse language code
 >         noSects   = null sections
 >     when noSects $
 >       putStrLn $ "hyakko doesn't support the language extension "
 >                ++ takeExtension x
 >     unless noSects $ do
->       let highlighted = highlight x sections
+>       let highlighted = highlight language sections
 >           y           = mapSections sections highlighted
 >       generateHTML opts' x y
 
@@ -190,9 +193,9 @@ datatype; otherwise it will return just the comment symbol.
 Highlights the current file of code, using **Kate**, and outputs the the
 highlighted html to its caller.
 
-> highlight :: FilePath -> Sections -> [Text]
-> highlight src section =
->   let language = fromJust $ getLanguage src
+> highlight :: Maybe Language -> Sections -> [Text]
+> highlight language' section =
+>   let language = fromJust language'
 >       langName = T.unpack $ name_ language
 >       input    = map (T.unpack . (M.! "codeText")) section
 >       html     = B.toHtml . K.formatHtmlBlock K.defaultFormatOpts
@@ -273,16 +276,25 @@ A list of the languages that Hyakko supports, mapping the file extension to
 the name of the Pygments lexer and the symbol that indicates a comment. To
 add another language to Hyakko's repertoire, add it here.
 
-> languages :: Languages
-> languages =
+> languageList :: Languages
+> languageList =
 >   let content  = unsafePerformIO $ readLanguageFile
 >       jsonData = decode' content
 >   in fromJust jsonData
 
+> decodeCustomLanguages :: Maybe FilePath -> IO (Maybe Languages)
+> decodeCustomLanguages Nothing     = return Nothing
+> decodeCustomLanguages (Just path) = L.readFile path >>= return . decode'
+
+Search a custom `HashMap` of languages with file extensions as keys.
+
+> getLanguage' :: FilePath -> Languages -> Maybe Language
+> getLanguage' src = M.lookup (takeExtension src)
+
 Get the current language we're documenting, based on the extension.
 
 > getLanguage :: FilePath -> Maybe Language
-> getLanguage src = M.lookup (takeExtension src) languages
+> getLanguage = (flip getLanguage') languageList
 
 Compute the destination HTML path for an input source file path. If the
 source is `lib/example.hs`, the HTML will be at docs/example.html
@@ -387,6 +399,8 @@ specifed, it will just use the ones in `defaultConfig`.
 >               &= help "use a custom css file"
 >   , template   = Nothing &= typFile
 >               &= help "use a custom pandoc template"
+>   , languages  = Nothing &= typFile
+>               &= help "use a custom languages.json"
 >   , dirOrFiles = [] &= args &= typ "FILES/DIRS"
 >   } &= summary ("hyakko v" ++ showVersion version)
 
