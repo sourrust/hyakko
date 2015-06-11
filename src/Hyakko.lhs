@@ -279,10 +279,15 @@ add another language to Hyakko's repertoire, add it here.
 >       jsonData = decode' content
 >   in fromJust jsonData
 
+Search a custom `HashMap` of languages with file extensions as keys.
+
+> getLanguage' :: FilePath -> Languages -> Maybe Language
+> getLanguage' src = M.lookup (takeExtension src)
+
 Get the current language we're documenting, based on the extension.
 
 > getLanguage :: FilePath -> Maybe Language
-> getLanguage src = M.lookup (takeExtension src) languages
+> getLanguage = (flip getLanguage') languageList
 
 Compute the destination HTML path for an input source file path. If the
 source is `lib/example.hs`, the HTML will be at docs/example.html
