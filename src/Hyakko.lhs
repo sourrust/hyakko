@@ -273,8 +273,8 @@ A list of the languages that Hyakko supports, mapping the file extension to
 the name of the Pygments lexer and the symbol that indicates a comment. To
 add another language to Hyakko's repertoire, add it here.
 
-> languages :: Languages
-> languages =
+> languageList :: Languages
+> languageList =
 >   let content  = unsafePerformIO $ readLanguageFile
 >       jsonData = decode' content
 >   in fromJust jsonData
