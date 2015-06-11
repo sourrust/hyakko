@@ -279,6 +279,10 @@ add another language to Hyakko's repertoire, add it here.
 >       jsonData = decode' content
 >   in fromJust jsonData
 
+> decodeCustomLanguages :: Maybe FilePath -> IO (Maybe Languages)
+> decodeCustomLanguages Nothing     = return Nothing
+> decodeCustomLanguages (Just path) = L.readFile path >>= return . decode'
+
 Search a custom `HashMap` of languages with file extensions as keys.
 
 > getLanguage' :: FilePath -> Languages -> Maybe Language
