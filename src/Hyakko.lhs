@@ -387,6 +387,8 @@ specifed, it will just use the ones in `defaultConfig`.
 >               &= help "use a custom css file"
 >   , template   = Nothing &= typFile
 >               &= help "use a custom pandoc template"
+>   , languages  = Nothing &= typFile
+>               &= help "use a custom languages.json"
 >   , dirOrFiles = [] &= args &= typ "FILES/DIRS"
 >   } &= summary ("hyakko v" ++ showVersion version)
 
