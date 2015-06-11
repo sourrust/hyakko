@@ -86,9 +86,11 @@ printing them out in an HTML template.
 >   putStrLn "hyakko: no files or options given (try --help)"
 > generateDocumentation opts xs = do
 >   dataDir <- getDataDir
->   let opts'  = configHyakko opts dataDir
->       dirout = output opts'
->   style <- hyakkoStyles opts'
+>   let opts'    = configHyakko opts dataDir
+>       dirout   = output opts'
+>       langFile = languages opts'
+>   style    <- hyakkoStyles opts'
+>   langList <- decodeCustomLanguages langFile
 >   T.writeFile (dirout </> "hyakko.css") style
 >   unless (isNothing $ layout opts') $ do
 >     let layoutDir = fromJust $ layout opts'
@@ -96,13 +98,14 @@ printing them out in an HTML template.
 >                                   </> "public"
 >   forM_ xs $ \x -> do
 >     code <- T.readFile x
->     let sections  = parse (getLanguage x) code
+>     let language  = maybe (getLanguage x) (getLanguage' x) langList
+>         sections  = parse language code
 >         noSects   = null sections
 >     when noSects $
 >       putStrLn $ "hyakko doesn't support the language extension "
 >                ++ takeExtension x
 >     unless noSects $ do
->       let highlighted = highlight x sections
+>       let highlighted = highlight language sections
 >           y           = mapSections sections highlighted
 >       generateHTML opts' x y
 
