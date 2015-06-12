@@ -57,7 +57,6 @@
                         , createDirectoryIfMissing
                         , copyFile
                         )
-<span class="kw">import </span><span class="dt">System.IO.Unsafe</span> (unsafePerformIO)
 <span class="kw">import </span><span class="dt">System.FilePath</span> ( takeBaseName
                        , takeExtension
                        , takeFileName
@@ -72,25 +71,28 @@ generateDocumentation _ [] <span class="fu">=</span>
   putStrLn <span class="st">&quot;hyakko: no files or options given (try --help)&quot;</span>
 generateDocumentation opts xs <span class="fu">=</span> <span class="kw">do</span>
   dataDir <span class="ot">&lt;-</span> getDataDir
-  <span class="kw">let</span> opts&#39;  <span class="fu">=</span> configHyakko opts dataDir
-      dirout <span class="fu">=</span> output opts&#39;
-  style <span class="ot">&lt;-</span> hyakkoStyles opts&#39;
+  <span class="kw">let</span> options  <span class="fu">=</span> configHyakko opts dataDir
+      dirout   <span class="fu">=</span> output options
+      langFile <span class="fu">=</span> languages options
+  style    <span class="ot">&lt;-</span> hyakkoStyles options
+  langList <span class="ot">&lt;-</span> decodeLanguageFile langFile
   T.writeFile (dirout <span class="fu">&lt;/&gt;</span> <span class="st">&quot;hyakko.css&quot;</span>) style
-  unless (isNothing <span class="fu">$</span> layout opts&#39;) <span class="fu">$</span> <span class="kw">do</span>
-    <span class="kw">let</span> layoutDir <span class="fu">=</span> fromJust <span class="fu">$</span> layout opts&#39;
-    copyDirectory opts&#39; <span class="fu">$</span> dataDir <span class="fu">&lt;/&gt;</span> <span class="st">&quot;resources&quot;</span> <span class="fu">&lt;/&gt;</span> layoutDir
-                                  <span class="fu">&lt;/&gt;</span> <span class="st">&quot;public&quot;</span>
+  unless (isNothing <span class="fu">$</span> layout options) <span class="fu">$</span> <span class="kw">do</span>
+    <span class="kw">let</span> layoutDir <span class="fu">=</span> fromJust <span class="fu">$</span> layout options
+    copyDirectory options <span class="fu">$</span> dataDir <span class="fu">&lt;/&gt;</span> <span class="st">&quot;resources&quot;</span> <span class="fu">&lt;/&gt;</span> layoutDir
+                                    <span class="fu">&lt;/&gt;</span> <span class="st">&quot;public&quot;</span>
   forM_ xs <span class="fu">$</span> \x <span class="ot">-&gt;</span> <span class="kw">do</span>
     code <span class="ot">&lt;-</span> T.readFile x
-    <span class="kw">let</span> sections  <span class="fu">=</span> parse (getLanguage x) code
+    <span class="kw">let</span> language  <span class="fu">=</span> getLanguage x langList
+        sections  <span class="fu">=</span> parse language code
         noSects   <span class="fu">=</span> null sections
     when noSects <span class="fu">$</span>
       putStrLn <span class="fu">$</span> <span class="st">&quot;hyakko doesn&#39;t support the language extension &quot;</span>
                <span class="fu">++</span> takeExtension x
     unless noSects <span class="fu">$</span> <span class="kw">do</span>
-      <span class="kw">let</span> highlighted <span class="fu">=</span> highlight x sections
+      <span class="kw">let</span> highlighted <span class="fu">=</span> highlight language sections
           y           <span class="fu">=</span> mapSections sections highlighted
-      generateHTML opts&#39; x y
+      generateHTML options x y
 </code></pre></div>
 <p>Given a string of source code, parse out eacg block of prose and the code that follows it — by detecting which is which, line by line — then create an individual <strong>section</strong> for it. Each section is Map with <code>docText</code> and <code>codeText</code> properties, and eventuall <code>docsHtml</code> and <code>codeHtml</code> as well.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">inSections ::</span> [<span class="dt">Text</span>] <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Sections</span>
 inSections xs r <span class="fu">=</span>
@@ -152,9 +154,9 @@ parse (<span class="dt">Just</span> src) code <span class="fu">=</span>
                     (<span class="dt">False</span>, _)    <span class="ot">-&gt;</span> put (ys <span class="fu">++</span> [s <span class="fu">&lt;&gt;</span> <span class="st">&quot; &quot;</span> <span class="fu">&lt;&gt;</span> x], <span class="dt">True</span>)
           <span class="kw">in</span> fst <span class="fu">.</span> snd <span class="fu">$</span> runState fn (mempty, <span class="dt">True</span>)
 </code></pre></div>
-<p>Highlights the current file of code, using <strong>Kate</strong>, and outputs the the highlighted html to its caller.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">highlight ::</span> FilePath <span class="ot">-&gt;</span> <span class="dt">Sections</span> <span class="ot">-&gt;</span> [<span class="dt">Text</span>]
-highlight src section <span class="fu">=</span>
-  <span class="kw">let</span> language <span class="fu">=</span> fromJust <span class="fu">$</span> getLanguage src
+<p>Highlights the current file of code, using <strong>Kate</strong>, and outputs the the highlighted html to its caller.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">highlight ::</span> <span class="dt">Maybe</span> <span class="dt">Language</span> <span class="ot">-&gt;</span> <span class="dt">Sections</span> <span class="ot">-&gt;</span> [<span class="dt">Text</span>]
+highlight language&#39; section <span class="fu">=</span>
+  <span class="kw">let</span> language <span class="fu">=</span> fromJust language&#39;
       langName <span class="fu">=</span> T.unpack <span class="fu">$</span> name_ language
       input    <span class="fu">=</span> map (T.unpack <span class="fu">.</span> (<span class="fu">M.!</span> <span class="st">&quot;codeText&quot;</span>)) section
       html     <span class="fu">=</span> B.toHtml <span class="fu">.</span> K.formatHtmlBlock K.defaultFormatOpts
@@ -216,14 +218,12 @@ replace reg x y <span class="fu">=</span>
 readLanguageFile <span class="fu">=</span> getDataFileName <span class="st">&quot;resources/languages.json&quot;</span>
                <span class="fu">&gt;&gt;=</span> L.readFile
 </code></pre></div>
-<p>A list of the languages that Hyakko supports, mapping the file extension to the name of the Pygments lexer and the symbol that indicates a comment. To add another language to Hyakko's repertoire, add it here.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">languages ::</span> <span class="dt">Languages</span>
-languages <span class="fu">=</span>
-  <span class="kw">let</span> content  <span class="fu">=</span> unsafePerformIO <span class="fu">$</span> readLanguageFile
-      jsonData <span class="fu">=</span> decode&#39; content
-  <span class="kw">in</span> fromJust jsonData
+<p>From a <code>languages.json</code> file, transform the data into useful list of language information inside the JSON.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">decodeLanguageFile ::</span> FilePath <span class="ot">-&gt;</span> <span class="dt">IO</span> (<span class="dt">Maybe</span> <span class="dt">Languages</span>)
+decodeLanguageFile <span class="fu">=</span> L.readFile <span class="fu">&gt;=&gt;</span> return <span class="fu">.</span> decode&#39;
 </code></pre></div>
-<p>Get the current language we're documenting, based on the extension.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">getLanguage ::</span> FilePath <span class="ot">-&gt;</span> <span class="dt">Maybe</span> <span class="dt">Language</span>
-getLanguage src <span class="fu">=</span> M.lookup (takeExtension src) languages
+<p>Search a <code>HashMap</code> of languages with file extensions as keys.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">getLanguage ::</span> FilePath <span class="ot">-&gt;</span> <span class="dt">Maybe</span> <span class="dt">Languages</span> <span class="ot">-&gt;</span> <span class="dt">Maybe</span> <span class="dt">Language</span>
+getLanguage _ <span class="dt">Nothing</span>        <span class="fu">=</span> <span class="dt">Nothing</span>
+getLanguage src (<span class="dt">Just</span> langs) <span class="fu">=</span> M.lookup (takeExtension src) langs
 </code></pre></div>
 <p>Compute the destination HTML path for an input source file path. If the source is <code>lib/example.hs</code>, the HTML will be at docs/example.html</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">destination ::</span> FilePath <span class="ot">-&gt;</span> FilePath <span class="ot">-&gt;</span> FilePath
 destination out fp <span class="fu">=</span> out <span class="fu">&lt;/&gt;</span> (takeBaseName fp) <span class="fu">++</span> <span class="st">&quot;.html&quot;</span>
@@ -292,18 +292,22 @@ copyDirectory opts dir <span class="fu">=</span> <span class="kw">do</span>
     copyFile x file
 </code></pre></div>
 <h2 id="configuration">Configuration</h2>
-<p>Default configuration <strong>options</strong>. If no arguments for these flags are specifed, it will just use the ones in <code>defaultConfig</code>.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">defaultConfig ::</span> <span class="dt">Hyakko</span>
-defaultConfig <span class="fu">=</span> <span class="dt">Hyakko</span>
-  { layout     <span class="fu">=</span> <span class="dt">Just</span> <span class="st">&quot;parallel&quot;</span> <span class="fu">&amp;=</span> typ <span class="st">&quot;LAYOUT&quot;</span>
-              <span class="fu">&amp;=</span> help <span class="st">&quot;choose a built-in layout (parallel, linear)&quot;</span>
-  , output     <span class="fu">=</span> <span class="st">&quot;docs&quot;</span>  <span class="fu">&amp;=</span> typDir
-              <span class="fu">&amp;=</span> help <span class="st">&quot;use a custom output path&quot;</span>
-  , css        <span class="fu">=</span> <span class="dt">Nothing</span> <span class="fu">&amp;=</span> typFile
-              <span class="fu">&amp;=</span> help <span class="st">&quot;use a custom css file&quot;</span>
-  , template   <span class="fu">=</span> <span class="dt">Nothing</span> <span class="fu">&amp;=</span> typFile
-              <span class="fu">&amp;=</span> help <span class="st">&quot;use a custom pandoc template&quot;</span>
-  , dirOrFiles <span class="fu">=</span> [] <span class="fu">&amp;=</span> args <span class="fu">&amp;=</span> typ <span class="st">&quot;FILES/DIRS&quot;</span>
-  } <span class="fu">&amp;=</span> summary (<span class="st">&quot;hyakko v&quot;</span> <span class="fu">++</span> showVersion version)
+<p>Default configuration <strong>options</strong>. If no arguments for these flags are specifed, it will just use the ones in <code>defaultConfig</code>.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">defaultConfig ::</span> <span class="dt">IO</span> <span class="dt">Hyakko</span>
+defaultConfig <span class="fu">=</span> <span class="kw">do</span>
+  languageFile <span class="ot">&lt;-</span> getDataFileName <span class="fu">$</span> <span class="st">&quot;resources&quot;</span> <span class="fu">&lt;/&gt;</span> <span class="st">&quot;languages.json&quot;</span>
+  return <span class="dt">Hyakko</span>
+    { layout     <span class="fu">=</span> <span class="dt">Just</span> <span class="st">&quot;parallel&quot;</span> <span class="fu">&amp;=</span> typ <span class="st">&quot;LAYOUT&quot;</span>
+                <span class="fu">&amp;=</span> help <span class="st">&quot;choose a built-in layout (parallel, linear)&quot;</span>
+    , output     <span class="fu">=</span> <span class="st">&quot;docs&quot;</span>  <span class="fu">&amp;=</span> typDir
+                <span class="fu">&amp;=</span> help <span class="st">&quot;use a custom output path&quot;</span>
+    , css        <span class="fu">=</span> <span class="dt">Nothing</span> <span class="fu">&amp;=</span> typFile
+                <span class="fu">&amp;=</span> help <span class="st">&quot;use a custom css file&quot;</span>
+    , template   <span class="fu">=</span> <span class="dt">Nothing</span> <span class="fu">&amp;=</span> typFile
+                <span class="fu">&amp;=</span> help <span class="st">&quot;use a custom pandoc template&quot;</span>
+    , languages  <span class="fu">=</span> languageFile <span class="fu">&amp;=</span> typFile
+                <span class="fu">&amp;=</span> help <span class="st">&quot;use a custom languages.json&quot;</span>
+    , dirOrFiles <span class="fu">=</span> [] <span class="fu">&amp;=</span> args <span class="fu">&amp;=</span> typ <span class="st">&quot;FILES/DIRS&quot;</span>
+    } <span class="fu">&amp;=</span> summary (<span class="st">&quot;hyakko v&quot;</span> <span class="fu">++</span> showVersion version)
 </code></pre></div>
 <p><strong>Configure</strong> this particular run of hyakko. We might use a passed-in external template, or one of the built-in <strong>layouts</strong>.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">configHyakko ::</span> <span class="dt">Hyakko</span> <span class="ot">-&gt;</span> FilePath <span class="ot">-&gt;</span> <span class="dt">Hyakko</span>
 configHyakko oldConfig datadir <span class="fu">=</span>
@@ -318,10 +322,11 @@ configHyakko oldConfig datadir <span class="fu">=</span>
 </code></pre></div>
 <p>Finally, using <a href="http://community.haskell.org/~ndm/cmdargs/">CmdArgs</a>, define a command line interface. Parse options and hyakko does the rest.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">main ::</span> <span class="dt">IO</span> ()
 main <span class="fu">=</span> <span class="kw">do</span>
-  opts <span class="ot">&lt;-</span> cmdArgs defaultConfig
-  source <span class="ot">&lt;-</span> sources <span class="fu">$</span> dirOrFiles opts
-  createDirectoryIfMissing <span class="dt">False</span> <span class="fu">$</span> output opts
-  generateDocumentation opts source</code></pre></div>
+  config  <span class="ot">&lt;-</span> defaultConfig
+  options <span class="ot">&lt;-</span> cmdArgs config
+  source  <span class="ot">&lt;-</span> sources <span class="fu">$</span> dirOrFiles options
+  createDirectoryIfMissing <span class="dt">False</span> <span class="fu">$</span> output options
+  generateDocumentation options source</code></pre></div>
       <div class="fleur">h</div>
     </div>
   </div>
