@@ -64,7 +64,6 @@ file](https://github.com/sourrust/hyakko/blob/master/resources/languages.json).
 >                         , createDirectoryIfMissing
 >                         , copyFile
 >                         )
-> import System.IO.Unsafe (unsafePerformIO)
 > import System.FilePath ( takeBaseName
 >                        , takeExtension
 >                        , takeFileName
@@ -86,19 +85,19 @@ printing them out in an HTML template.
 >   putStrLn "hyakko: no files or options given (try --help)"
 > generateDocumentation opts xs = do
 >   dataDir <- getDataDir
->   let opts'    = configHyakko opts dataDir
->       dirout   = output opts'
->       langFile = languages opts'
->   style    <- hyakkoStyles opts'
->   langList <- decodeCustomLanguages langFile
+>   let options  = configHyakko opts dataDir
+>       dirout   = output options
+>       langFile = languages options
+>   style    <- hyakkoStyles options
+>   langList <- decodeLanguageFile langFile
 >   T.writeFile (dirout </> "hyakko.css") style
->   unless (isNothing $ layout opts') $ do
->     let layoutDir = fromJust $ layout opts'
->     copyDirectory opts' $ dataDir </> "resources" </> layoutDir
->                                   </> "public"
+>   unless (isNothing $ layout options) $ do
+>     let layoutDir = fromJust $ layout options
+>     copyDirectory options $ dataDir </> "resources" </> layoutDir
+>                                     </> "public"
 >   forM_ xs $ \x -> do
 >     code <- T.readFile x
->     let language  = maybe (getLanguage x) (getLanguage' x) langList
+>     let language  = getLanguage x langList
 >         sections  = parse language code
 >         noSects   = null sections
 >     when noSects $
@@ -107,7 +106,7 @@ printing them out in an HTML template.
 >     unless noSects $ do
 >       let highlighted = highlight language sections
 >           y           = mapSections sections highlighted
->       generateHTML opts' x y
+>       generateHTML options x y
 
 Given a string of source code, parse out eacg block of prose and the code
 that follows it — by detecting which is which, line by line — then create an
@@ -272,29 +271,17 @@ Simpler type signatuted regex replace function.
 > readLanguageFile = getDataFileName "resources/languages.json"
 >                >>= L.readFile
 
-A list of the languages that Hyakko supports, mapping the file extension to
-the name of the Pygments lexer and the symbol that indicates a comment. To
-add another language to Hyakko's repertoire, add it here.
+From a `languages.json` file, transform the data into useful list of
+language information inside the JSON.
 
-> languageList :: Languages
-> languageList =
->   let content  = unsafePerformIO $ readLanguageFile
->       jsonData = decode' content
->   in fromJust jsonData
+> decodeLanguageFile :: FilePath -> IO (Maybe Languages)
+> decodeLanguageFile = L.readFile >=> return . decode'
 
-> decodeCustomLanguages :: Maybe FilePath -> IO (Maybe Languages)
-> decodeCustomLanguages Nothing     = return Nothing
-> decodeCustomLanguages (Just path) = L.readFile path >>= return . decode'
+Search a `HashMap` of languages with file extensions as keys.
 
-Search a custom `HashMap` of languages with file extensions as keys.
-
-> getLanguage' :: FilePath -> Languages -> Maybe Language
-> getLanguage' src = M.lookup (takeExtension src)
-
-Get the current language we're documenting, based on the extension.
-
-> getLanguage :: FilePath -> Maybe Language
-> getLanguage = (flip getLanguage') languageList
+> getLanguage :: FilePath -> Maybe Languages -> Maybe Language
+> getLanguage _ Nothing        = Nothing
+> getLanguage src (Just langs) = M.lookup (takeExtension src) langs
 
 Compute the destination HTML path for an input source file path. If the
 source is `lib/example.hs`, the HTML will be at docs/example.html
@@ -389,20 +376,22 @@ Configuration
 Default configuration **options**. If no arguments for these flags are
 specifed, it will just use the ones in `defaultConfig`.
 
-> defaultConfig :: Hyakko
-> defaultConfig = Hyakko
->   { layout     = Just "parallel" &= typ "LAYOUT"
->               &= help "choose a built-in layout (parallel, linear)"
->   , output     = "docs"  &= typDir
->               &= help "use a custom output path"
->   , css        = Nothing &= typFile
->               &= help "use a custom css file"
->   , template   = Nothing &= typFile
->               &= help "use a custom pandoc template"
->   , languages  = Nothing &= typFile
->               &= help "use a custom languages.json"
->   , dirOrFiles = [] &= args &= typ "FILES/DIRS"
->   } &= summary ("hyakko v" ++ showVersion version)
+> defaultConfig :: IO Hyakko
+> defaultConfig = do
+>   languageFile <- getDataFileName $ "resources" </> "languages.json"
+>   return Hyakko
+>     { layout     = Just "parallel" &= typ "LAYOUT"
+>                 &= help "choose a built-in layout (parallel, linear)"
+>     , output     = "docs"  &= typDir
+>                 &= help "use a custom output path"
+>     , css        = Nothing &= typFile
+>                 &= help "use a custom css file"
+>     , template   = Nothing &= typFile
+>                 &= help "use a custom pandoc template"
+>     , languages  = languageFile &= typFile
+>                 &= help "use a custom languages.json"
+>     , dirOrFiles = [] &= args &= typ "FILES/DIRS"
+>     } &= summary ("hyakko v" ++ showVersion version)
 
 **Configure** this particular run of hyakko. We might use a passed-in
 external template, or one of the built-in **layouts**.
@@ -423,7 +412,8 @@ a command line interface. Parse options and hyakko does the rest.
 
 > main :: IO ()
 > main = do
->   opts <- cmdArgs defaultConfig
->   source <- sources $ dirOrFiles opts
->   createDirectoryIfMissing False $ output opts
->   generateDocumentation opts source
+>   config  <- defaultConfig
+>   options <- cmdArgs config
+>   source  <- sources $ dirOrFiles options
+>   createDirectoryIfMissing False $ output options
+>   generateDocumentation options source

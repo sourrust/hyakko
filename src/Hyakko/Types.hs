@@ -38,6 +38,6 @@ data Hyakko =
          , output     :: FilePath
          , css        :: Maybe FilePath
          , template   :: Maybe FilePath
-         , languages  :: Maybe FilePath
+         , languages  :: FilePath
          , dirOrFiles :: [FilePath]
          } deriving (Show, Data, Typeable)
