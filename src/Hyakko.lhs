@@ -64,7 +64,6 @@ file](https://github.com/sourrust/hyakko/blob/master/resources/languages.json).
 >                         , createDirectoryIfMissing
 >                         , copyFile
 >                         )
-> import System.IO.Unsafe (unsafePerformIO)
 > import System.FilePath ( takeBaseName
 >                        , takeExtension
 >                        , takeFileName
@@ -377,23 +376,22 @@ Configuration
 Default configuration **options**. If no arguments for these flags are
 specifed, it will just use the ones in `defaultConfig`.
 
-> defaultConfig :: Hyakko
-> defaultConfig =
->   let languageFile = unsafePerformIO . getDataFileName $ "resources"
->                                                      </> "languages.json"
->   in Hyakko
->   { layout     = Just "parallel" &= typ "LAYOUT"
->               &= help "choose a built-in layout (parallel, linear)"
->   , output     = "docs"  &= typDir
->               &= help "use a custom output path"
->   , css        = Nothing &= typFile
->               &= help "use a custom css file"
->   , template   = Nothing &= typFile
->               &= help "use a custom pandoc template"
->   , languages  = languageFile &= typFile
->               &= help "use a custom languages.json"
->   , dirOrFiles = [] &= args &= typ "FILES/DIRS"
->   } &= summary ("hyakko v" ++ showVersion version)
+> defaultConfig :: IO Hyakko
+> defaultConfig = do
+>   languageFile <- getDataFileName $ "resources" </> "languages.json"
+>   return Hyakko
+>     { layout     = Just "parallel" &= typ "LAYOUT"
+>                 &= help "choose a built-in layout (parallel, linear)"
+>     , output     = "docs"  &= typDir
+>                 &= help "use a custom output path"
+>     , css        = Nothing &= typFile
+>                 &= help "use a custom css file"
+>     , template   = Nothing &= typFile
+>                 &= help "use a custom pandoc template"
+>     , languages  = languageFile &= typFile
+>                 &= help "use a custom languages.json"
+>     , dirOrFiles = [] &= args &= typ "FILES/DIRS"
+>     } &= summary ("hyakko v" ++ showVersion version)
 
 **Configure** this particular run of hyakko. We might use a passed-in
 external template, or one of the built-in **layouts**.
@@ -414,7 +412,8 @@ a command line interface. Parse options and hyakko does the rest.
 
 > main :: IO ()
 > main = do
->   opts <- cmdArgs defaultConfig
+>   config <- defaultConfig
+>   opts <- cmdArgs config
 >   source <- sources $ dirOrFiles opts
 >   createDirectoryIfMissing False $ output opts
 >   generateDocumentation opts source
