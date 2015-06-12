@@ -90,7 +90,7 @@ printing them out in an HTML template.
 >       dirout   = output opts'
 >       langFile = languages opts'
 >   style    <- hyakkoStyles opts'
->   langList <- decodeCustomLanguages langFile
+>   langList <- decodeLanguageFile langFile
 >   T.writeFile (dirout </> "hyakko.css") style
 >   unless (isNothing $ layout opts') $ do
 >     let layoutDir = fromJust $ layout opts'
@@ -282,9 +282,8 @@ add another language to Hyakko's repertoire, add it here.
 >       jsonData = decode' content
 >   in fromJust jsonData
 
-> decodeCustomLanguages :: Maybe FilePath -> IO (Maybe Languages)
-> decodeCustomLanguages Nothing     = return Nothing
-> decodeCustomLanguages (Just path) = L.readFile path >>= return . decode'
+> decodeLanguageFile :: FilePath -> IO (Maybe Languages)
+> decodeLanguageFile = L.readFile >=> return . decode'
 
 Search a custom `HashMap` of languages with file extensions as keys.
 
