@@ -390,7 +390,10 @@ Default configuration **options**. If no arguments for these flags are
 specifed, it will just use the ones in `defaultConfig`.
 
 > defaultConfig :: Hyakko
-> defaultConfig = Hyakko
+> defaultConfig =
+>   let languageFile = unsafePerformIO . getDataFileName $ "resources"
+>                                                      </> "languages.json"
+>   in Hyakko
 >   { layout     = Just "parallel" &= typ "LAYOUT"
 >               &= help "choose a built-in layout (parallel, linear)"
 >   , output     = "docs"  &= typDir
@@ -399,7 +402,7 @@ specifed, it will just use the ones in `defaultConfig`.
 >               &= help "use a custom css file"
 >   , template   = Nothing &= typFile
 >               &= help "use a custom pandoc template"
->   , languages  = Nothing &= typFile
+>   , languages  = languageFile &= typFile
 >               &= help "use a custom languages.json"
 >   , dirOrFiles = [] &= args &= typ "FILES/DIRS"
 >   } &= summary ("hyakko v" ++ showVersion version)
