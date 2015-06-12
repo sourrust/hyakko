@@ -272,15 +272,6 @@ Simpler type signatuted regex replace function.
 > readLanguageFile = getDataFileName "resources/languages.json"
 >                >>= L.readFile
 
-A list of the languages that Hyakko supports, mapping the file extension to
-the name of the Pygments lexer and the symbol that indicates a comment. To
-add another language to Hyakko's repertoire, add it here.
-
-> languageList :: Languages
-> languageList =
->   let content  = unsafePerformIO $ readLanguageFile
->       jsonData = decode' content
->   in fromJust jsonData
 
 > decodeLanguageFile :: FilePath -> IO (Maybe Languages)
 > decodeLanguageFile = L.readFile >=> return . decode'
