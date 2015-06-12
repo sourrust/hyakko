@@ -85,16 +85,16 @@ printing them out in an HTML template.
 >   putStrLn "hyakko: no files or options given (try --help)"
 > generateDocumentation opts xs = do
 >   dataDir <- getDataDir
->   let opts'    = configHyakko opts dataDir
->       dirout   = output opts'
->       langFile = languages opts'
->   style    <- hyakkoStyles opts'
+>   let options  = configHyakko opts dataDir
+>       dirout   = output options
+>       langFile = languages options
+>   style    <- hyakkoStyles options
 >   langList <- decodeLanguageFile langFile
 >   T.writeFile (dirout </> "hyakko.css") style
->   unless (isNothing $ layout opts') $ do
->     let layoutDir = fromJust $ layout opts'
->     copyDirectory opts' $ dataDir </> "resources" </> layoutDir
->                                   </> "public"
+>   unless (isNothing $ layout options) $ do
+>     let layoutDir = fromJust $ layout options
+>     copyDirectory options $ dataDir </> "resources" </> layoutDir
+>                                     </> "public"
 >   forM_ xs $ \x -> do
 >     code <- T.readFile x
 >     let language  = getLanguage x langList
@@ -106,7 +106,7 @@ printing them out in an HTML template.
 >     unless noSects $ do
 >       let highlighted = highlight language sections
 >           y           = mapSections sections highlighted
->       generateHTML opts' x y
+>       generateHTML options x y
 
 Given a string of source code, parse out eacg block of prose and the code
 that follows it — by detecting which is which, line by line — then create an
@@ -412,8 +412,8 @@ a command line interface. Parse options and hyakko does the rest.
 
 > main :: IO ()
 > main = do
->   config <- defaultConfig
->   opts <- cmdArgs config
->   source <- sources $ dirOrFiles opts
->   createDirectoryIfMissing False $ output opts
->   generateDocumentation opts source
+>   config  <- defaultConfig
+>   options <- cmdArgs config
+>   source  <- sources $ dirOrFiles options
+>   createDirectoryIfMissing False $ output options
+>   generateDocumentation options source
