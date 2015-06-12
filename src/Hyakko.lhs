@@ -272,6 +272,8 @@ Simpler type signatuted regex replace function.
 > readLanguageFile = getDataFileName "resources/languages.json"
 >                >>= L.readFile
 
+From a `languages.json` file, transform the data into useful list of
+language information inside the JSON.
 
 > decodeLanguageFile :: FilePath -> IO (Maybe Languages)
 > decodeLanguageFile = L.readFile >=> return . decode'
