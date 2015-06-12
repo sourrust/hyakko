@@ -98,7 +98,7 @@ printing them out in an HTML template.
 >                                   </> "public"
 >   forM_ xs $ \x -> do
 >     code <- T.readFile x
->     let language  = maybe (getLanguage x) (getLanguage' x) langList
+>     let language  = getLanguage x langList
 >         sections  = parse language code
 >         noSects   = null sections
 >     when noSects $
@@ -276,15 +276,11 @@ Simpler type signatuted regex replace function.
 > decodeLanguageFile :: FilePath -> IO (Maybe Languages)
 > decodeLanguageFile = L.readFile >=> return . decode'
 
-Search a custom `HashMap` of languages with file extensions as keys.
+Search a `HashMap` of languages with file extensions as keys.
 
-> getLanguage' :: FilePath -> Languages -> Maybe Language
-> getLanguage' src = M.lookup (takeExtension src)
-
-Get the current language we're documenting, based on the extension.
-
-> getLanguage :: FilePath -> Maybe Language
-> getLanguage = (flip getLanguage') languageList
+> getLanguage :: FilePath -> Maybe Languages -> Maybe Language
+> getLanguage _ Nothing        = Nothing
+> getLanguage src (Just langs) = M.lookup (takeExtension src) langs
 
 Compute the destination HTML path for an input source file path. If the
 source is `lib/example.hs`, the HTML will be at docs/example.html
