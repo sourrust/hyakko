@@ -40,7 +40,6 @@ file](https://github.com/sourrust/hyakko/blob/master/resources/languages.json).
 
 > import Data.Aeson (decode', Value(..))
 > import qualified Data.HashMap.Strict as M
-> import Data.ByteString.Lazy.Char8 (ByteString)
 > import qualified Data.ByteString.Lazy.Char8 as L
 > import Data.Text (Text)
 > import qualified Data.Text as T
@@ -50,7 +49,6 @@ file](https://github.com/sourrust/hyakko/blob/master/resources/languages.json).
 > import Data.Monoid
 > import Data.Version (showVersion)
 > import Control.Applicative ((<$>))
-> import Control.Monad (filterM, (>=>), forM, forM_, unless, when)
 > import Control.Monad.State.Strict
 > import qualified Text.Blaze.Html as B
 > import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
@@ -268,10 +266,6 @@ Simpler type signatuted regex replace function.
 >       reg'       = L.pack $ T.unpack reg
 >       (_, _, rp) = str =~ reg' :: (String, String, String)
 >   in y <> (T.pack rp)
-
-> readLanguageFile :: IO ByteString
-> readLanguageFile = getDataFileName "resources/languages.json"
->                >>= L.readFile
 
 From a `languages.json` file, transform the data into useful list of
 language information inside the JSON.
