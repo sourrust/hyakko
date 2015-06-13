@@ -235,7 +235,7 @@ template found in `resources/linear/hyakko.html` or
 >         else
 >           ([("header", header)], count)
 >   source <- sources $ dirOrFiles opts
->   html <- hyakkoTemplate opts . varListToJSON $ concat
+>   html   <- hyakkoTemplate opts . varListToJSON $ concat
 >     [ [("title", if isHeader then getHeader header else title)]
 >     , h
 >     , cssTemplate opts
@@ -336,8 +336,8 @@ sub-directories.
 >   let reg = L.pack "[^(^\\.{1,2}$)]"
 >   content <-  filter (=~ reg) <$> getDirectoryContents d
 >   let content' = map (d </>) content
->   files <- filterM doesFileExist content'
->   subdir <- filterM doesDirectoryExist content'
+>   files      <- filterM doesFileExist content'
+>   subdir     <- filterM doesDirectoryExist content'
 >   subcontent <- fmap (\x -> (concatMap fst x, concatMap snd x))
 >                      (mapM unpackDirectories subdir)
 >   return (files ++ fst subcontent, subdir ++ snd subcontent)
