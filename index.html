@@ -50,13 +50,15 @@
 <span class="kw">import qualified</span> <span class="dt">Text.Highlighting.Kate</span> <span class="kw">as</span> <span class="dt">K</span>
 <span class="kw">import </span><span class="dt">Text.Pandoc.Templates</span>
 <span class="kw">import </span><span class="dt">Text.Regex.PCRE</span> ((=~))
-<span class="kw">import </span><span class="dt">System.Console.CmdArgs</span>
 <span class="kw">import </span><span class="dt">System.Directory</span> ( getDirectoryContents
                         , doesDirectoryExist
                         , doesFileExist
                         , createDirectoryIfMissing
                         , copyFile
                         )
+<span class="kw">import </span><span class="dt">System.Console.Docopt.NoTH</span>
+<span class="kw">import </span><span class="dt">System.Environment</span> (getArgs)
+<span class="kw">import </span><span class="dt">System.Exit</span> (exitSuccess)
 <span class="kw">import </span><span class="dt">System.FilePath</span> ( takeBaseName
                        , takeExtension
                        , takeFileName
@@ -291,23 +293,24 @@ copyDirectory opts dir <span class="fu">=</span> <span class="kw">do</span>
         file <span class="fu">=</span> dirout <span class="fu">&lt;/&gt;</span> (T.unpack <span class="fu">$</span> T.replace oldLocation mempty x&#39;)
     copyFile x file
 </code></pre></div>
+<p>Print information and exit hyakko when a flag is present. Mostly for <code>version</code> and <code>help</code> printing.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">whenPresentPrintAndExit ::</span> <span class="dt">Arguments</span> <span class="ot">-&gt;</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
+whenPresentPrintAndExit arguments optName string <span class="fu">=</span>
+  when (arguments <span class="ot">`isPresent`</span> longOption optName) <span class="fu">$</span>
+    putStrLn string <span class="fu">&gt;&gt;</span> exitSuccess
+</code></pre></div>
 <h2 id="configuration">Configuration</h2>
-<p>Default configuration <strong>options</strong>. If no arguments for these flags are specifed, it will just use the ones in <code>defaultConfig</code>.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">defaultConfig ::</span> <span class="dt">IO</span> <span class="dt">Hyakko</span>
-defaultConfig <span class="fu">=</span> <span class="kw">do</span>
+<p>Default configuration <strong>options</strong>. If no arguments for these flags are specifed, it will just use the ones in <code>defaultConfig</code>.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">defaultConfig ::</span> <span class="dt">Arguments</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> <span class="dt">Hyakko</span>
+defaultConfig arguments <span class="fu">=</span> <span class="kw">do</span>
+  <span class="kw">let</span> argOrDefault <span class="fu">=</span> getArgWithDefault arguments
   languageFile <span class="ot">&lt;-</span> getDataFileName <span class="fu">$</span> <span class="st">&quot;resources&quot;</span> <span class="fu">&lt;/&gt;</span> <span class="st">&quot;languages.json&quot;</span>
   return <span class="dt">Hyakko</span>
-    { layout     <span class="fu">=</span> <span class="dt">Just</span> <span class="st">&quot;parallel&quot;</span> <span class="fu">&amp;=</span> typ <span class="st">&quot;LAYOUT&quot;</span>
-                <span class="fu">&amp;=</span> help <span class="st">&quot;choose a built-in layout (parallel, linear)&quot;</span>
-    , output     <span class="fu">=</span> <span class="st">&quot;docs&quot;</span>  <span class="fu">&amp;=</span> typDir
-                <span class="fu">&amp;=</span> help <span class="st">&quot;use a custom output path&quot;</span>
-    , css        <span class="fu">=</span> <span class="dt">Nothing</span> <span class="fu">&amp;=</span> typFile
-                <span class="fu">&amp;=</span> help <span class="st">&quot;use a custom css file&quot;</span>
-    , template   <span class="fu">=</span> <span class="dt">Nothing</span> <span class="fu">&amp;=</span> typFile
-                <span class="fu">&amp;=</span> help <span class="st">&quot;use a custom pandoc template&quot;</span>
-    , languages  <span class="fu">=</span> languageFile <span class="fu">&amp;=</span> typFile
-                <span class="fu">&amp;=</span> help <span class="st">&quot;use a custom languages.json&quot;</span>
-    , dirOrFiles <span class="fu">=</span> [] <span class="fu">&amp;=</span> args <span class="fu">&amp;=</span> typ <span class="st">&quot;FILES/DIRS&quot;</span>
-    } <span class="fu">&amp;=</span> summary (<span class="st">&quot;hyakko v&quot;</span> <span class="fu">++</span> showVersion version)
+    { layout     <span class="fu">=</span> <span class="dt">Just</span> <span class="fu">$</span> <span class="st">&quot;parallel&quot;</span> <span class="ot">`argOrDefault`</span> longOption <span class="st">&quot;layout&quot;</span>
+    , output     <span class="fu">=</span> <span class="st">&quot;docs&quot;</span> <span class="ot">`argOrDefault`</span> longOption <span class="st">&quot;output&quot;</span>
+    , css        <span class="fu">=</span> getArg arguments <span class="fu">$</span> longOption <span class="st">&quot;css&quot;</span>
+    , template   <span class="fu">=</span> getArg arguments <span class="fu">$</span> longOption <span class="st">&quot;template&quot;</span>
+    , languages  <span class="fu">=</span> languageFile <span class="ot">`argOrDefault`</span> longOption <span class="st">&quot;languages&quot;</span>
+    , dirOrFiles <span class="fu">=</span> getAllArgs arguments <span class="fu">$</span> argument <span class="st">&quot;files&quot;</span>
+    }
 </code></pre></div>
 <p><strong>Configure</strong> this particular run of hyakko. We might use a passed-in external template, or one of the built-in <strong>layouts</strong>.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">configHyakko ::</span> <span class="dt">Hyakko</span> <span class="ot">-&gt;</span> FilePath <span class="ot">-&gt;</span> <span class="dt">Hyakko</span>
 configHyakko oldConfig datadir <span class="fu">=</span>
@@ -320,11 +323,33 @@ configHyakko oldConfig datadir <span class="fu">=</span>
     <span class="kw">else</span>
       oldConfig { layout <span class="fu">=</span> <span class="dt">Nothing</span> }
 </code></pre></div>
-<p>Finally, using <a href="http://community.haskell.org/~ndm/cmdargs/">CmdArgs</a>, define a command line interface. Parse options and hyakko does the rest.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">main ::</span> <span class="dt">IO</span> ()
+<p>Using <a href="https://github.com/docopt/docopt.hs">docopt</a>, define a command line interface along with the actually usage text used for the <code>help</code> flag.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">hyakkoUsage ::</span> <span class="dt">IO</span> <span class="dt">Docopt</span>
+hyakkoUsage <span class="fu">=</span> parseUsageOrExit <span class="fu">$</span> unlines
+  [ <span class="st">&quot;&quot;</span>
+  , <span class="st">&quot;  Usage: hyakko [options] [&lt;files&gt;...]\n&quot;</span>
+  , <span class="st">&quot;  Options:\n&quot;</span>
+  , <span class="st">&quot;  -h, --help              display this help message&quot;</span>
+  , <span class="st">&quot;  -V, --version           display current version&quot;</span>
+  , <span class="st">&quot;  -L, --languages &lt;file&gt;  use a custom languages.json&quot;</span>
+  , <span class="st">&quot;  -l, --layout &lt;name&gt;     choose a built-in layout &quot;</span> <span class="fu">++</span>
+                               <span class="st">&quot;(parallel, linear)&quot;</span>
+  , <span class="st">&quot;  -o, --output &lt;path&gt;     use a custom output path&quot;</span>
+  , <span class="st">&quot;  -c, --css &lt;file&gt;        use a custom css file&quot;</span>
+  , <span class="st">&quot;  -t, --template &lt;file&gt;   use a custom pandoc template&quot;</span>
+  ]
+</code></pre></div>
+<p>Finally, parse and handle certain flags then hyakko does the rest.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">main ::</span> <span class="dt">IO</span> ()
 main <span class="fu">=</span> <span class="kw">do</span>
-  config  <span class="ot">&lt;-</span> defaultConfig
-  options <span class="ot">&lt;-</span> cmdArgs config
-  source  <span class="ot">&lt;-</span> sources <span class="fu">$</span> dirOrFiles options
+  usage&#39;    <span class="ot">&lt;-</span> hyakkoUsage
+  arguments <span class="ot">&lt;-</span> getArgs
+  options&#39;  <span class="ot">&lt;-</span> parseArgsOrExit usage&#39; arguments
+  options   <span class="ot">&lt;-</span> defaultConfig options&#39;
+
+  whenPresentPrintAndExit options&#39; <span class="st">&quot;version&quot;</span> <span class="fu">$</span>
+    <span class="st">&quot;hyakko v&quot;</span> <span class="fu">++</span> showVersion version
+  whenPresentPrintAndExit options&#39; <span class="st">&quot;help&quot;</span> <span class="fu">$</span> usage usage&#39;
+
+  source <span class="ot">&lt;-</span> sources <span class="fu">$</span> dirOrFiles options
   createDirectoryIfMissing <span class="dt">False</span> <span class="fu">$</span> output options
   generateDocumentation options source</code></pre></div>
       <div class="fleur">h</div>
