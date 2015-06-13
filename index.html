@@ -33,7 +33,6 @@
 
 <span class="kw">import </span><span class="dt">Data.Aeson</span> (decode&#39;, <span class="dt">Value</span>(..))
 <span class="kw">import qualified</span> <span class="dt">Data.HashMap.Strict</span> <span class="kw">as</span> <span class="dt">M</span>
-<span class="kw">import </span><span class="dt">Data.ByteString.Lazy.Char8</span> (<span class="dt">ByteString</span>)
 <span class="kw">import qualified</span> <span class="dt">Data.ByteString.Lazy.Char8</span> <span class="kw">as</span> <span class="dt">L</span>
 <span class="kw">import </span><span class="dt">Data.Text</span> (<span class="dt">Text</span>)
 <span class="kw">import qualified</span> <span class="dt">Data.Text</span> <span class="kw">as</span> <span class="dt">T</span>
@@ -43,7 +42,6 @@
 <span class="kw">import </span><span class="dt">Data.Monoid</span>
 <span class="kw">import </span><span class="dt">Data.Version</span> (showVersion)
 <span class="kw">import </span><span class="dt">Control.Applicative</span> ((&lt;$&gt;))
-<span class="kw">import </span><span class="dt">Control.Monad</span> (filterM, (&gt;=&gt;), forM, forM_, unless, when)
 <span class="kw">import </span><span class="dt">Control.Monad.State.Strict</span>
 <span class="kw">import qualified</span> <span class="dt">Text.Blaze.Html</span> <span class="kw">as</span> <span class="dt">B</span>
 <span class="kw">import </span><span class="dt">Text.Blaze.Html.Renderer.Utf8</span> (renderHtml)
@@ -191,7 +189,7 @@ generateHTML opts src section <span class="fu">=</span> <span class="kw">do</spa
         <span class="kw">else</span>
           ([(<span class="st">&quot;header&quot;</span>, header)], count)
   source <span class="ot">&lt;-</span> sources <span class="fu">$</span> dirOrFiles opts
-  html <span class="ot">&lt;-</span> hyakkoTemplate opts <span class="fu">.</span> varListToJSON <span class="fu">$</span> concat
+  html   <span class="ot">&lt;-</span> hyakkoTemplate opts <span class="fu">.</span> varListToJSON <span class="fu">$</span> concat
     [ [(<span class="st">&quot;title&quot;</span>, <span class="kw">if</span> isHeader <span class="kw">then</span> getHeader header <span class="kw">else</span> title)]
     , h
     , cssTemplate opts
@@ -215,10 +213,6 @@ replace reg x y <span class="fu">=</span>
       reg&#39;       <span class="fu">=</span> L.pack <span class="fu">$</span> T.unpack reg
       (_, _, rp) <span class="fu">=</span> str <span class="fu">=~</span><span class="ot"> reg&#39; ::</span> (<span class="dt">String</span>, <span class="dt">String</span>, <span class="dt">String</span>)
   <span class="kw">in</span> y <span class="fu">&lt;&gt;</span> (T.pack rp)
-
-<span class="ot">readLanguageFile ::</span> <span class="dt">IO</span> <span class="dt">ByteString</span>
-readLanguageFile <span class="fu">=</span> getDataFileName <span class="st">&quot;resources/languages.json&quot;</span>
-               <span class="fu">&gt;&gt;=</span> L.readFile
 </code></pre></div>
 <p>From a <code>languages.json</code> file, transform the data into useful list of language information inside the JSON.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">decodeLanguageFile ::</span> FilePath <span class="ot">-&gt;</span> <span class="dt">IO</span> (<span class="dt">Maybe</span> <span class="dt">Languages</span>)
 decodeLanguageFile <span class="fu">=</span> L.readFile <span class="fu">&gt;=&gt;</span> return <span class="fu">.</span> decode&#39;
@@ -267,8 +261,8 @@ unpackDirectories d <span class="fu">=</span> <span class="kw">do</span>
   <span class="kw">let</span> reg <span class="fu">=</span> L.pack <span class="st">&quot;[^(^\\.{1,2}$)]&quot;</span>
   content <span class="ot">&lt;-</span>  filter (<span class="fu">=~</span> reg) <span class="fu">&lt;$&gt;</span> getDirectoryContents d
   <span class="kw">let</span> content&#39; <span class="fu">=</span> map (d <span class="fu">&lt;/&gt;</span>) content
-  files <span class="ot">&lt;-</span> filterM doesFileExist content&#39;
-  subdir <span class="ot">&lt;-</span> filterM doesDirectoryExist content&#39;
+  files      <span class="ot">&lt;-</span> filterM doesFileExist content&#39;
+  subdir     <span class="ot">&lt;-</span> filterM doesDirectoryExist content&#39;
   subcontent <span class="ot">&lt;-</span> fmap (\x <span class="ot">-&gt;</span> (concatMap fst x, concatMap snd x))
                      (mapM unpackDirectories subdir)
   return (files <span class="fu">++</span> fst subcontent, subdir <span class="fu">++</span> snd subcontent)
@@ -309,7 +303,7 @@ defaultConfig arguments <span class="fu">=</span> <span class="kw">do</span>
     , css        <span class="fu">=</span> getArg arguments <span class="fu">$</span> longOption <span class="st">&quot;css&quot;</span>
     , template   <span class="fu">=</span> getArg arguments <span class="fu">$</span> longOption <span class="st">&quot;template&quot;</span>
     , languages  <span class="fu">=</span> languageFile <span class="ot">`argOrDefault`</span> longOption <span class="st">&quot;languages&quot;</span>
-    , dirOrFiles <span class="fu">=</span> getAllArgs arguments <span class="fu">$</span> argument <span class="st">&quot;files&quot;</span>
+    , dirOrFiles <span class="fu">=</span> getAllArgs arguments <span class="fu">$</span> argument <span class="st">&quot;file&quot;</span>
     }
 </code></pre></div>
 <p><strong>Configure</strong> this particular run of hyakko. We might use a passed-in external template, or one of the built-in <strong>layouts</strong>.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">configHyakko ::</span> <span class="dt">Hyakko</span> <span class="ot">-&gt;</span> FilePath <span class="ot">-&gt;</span> <span class="dt">Hyakko</span>
@@ -326,16 +320,16 @@ configHyakko oldConfig datadir <span class="fu">=</span>
 <p>Using <a href="https://github.com/docopt/docopt.hs">docopt</a>, define a command line interface along with the actually usage text used for the <code>help</code> flag.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">hyakkoUsage ::</span> <span class="dt">IO</span> <span class="dt">Docopt</span>
 hyakkoUsage <span class="fu">=</span> parseUsageOrExit <span class="fu">$</span> unlines
   [ <span class="st">&quot;&quot;</span>
-  , <span class="st">&quot;  Usage: hyakko [options] [&lt;files&gt;...]\n&quot;</span>
+  , <span class="st">&quot;  Usage: hyakko [options] [&lt;file&gt;...]\n&quot;</span>
   , <span class="st">&quot;  Options:\n&quot;</span>
-  , <span class="st">&quot;  -h, --help              display this help message&quot;</span>
-  , <span class="st">&quot;  -V, --version           display current version&quot;</span>
-  , <span class="st">&quot;  -L, --languages &lt;file&gt;  use a custom languages.json&quot;</span>
-  , <span class="st">&quot;  -l, --layout &lt;name&gt;     choose a built-in layout &quot;</span> <span class="fu">++</span>
-                               <span class="st">&quot;(parallel, linear)&quot;</span>
-  , <span class="st">&quot;  -o, --output &lt;path&gt;     use a custom output path&quot;</span>
-  , <span class="st">&quot;  -c, --css &lt;file&gt;        use a custom css file&quot;</span>
-  , <span class="st">&quot;  -t, --template &lt;file&gt;   use a custom pandoc template&quot;</span>
+  , <span class="st">&quot;    -h, --help              display this help message&quot;</span>
+  , <span class="st">&quot;    -V, --version           display current version&quot;</span>
+  , <span class="st">&quot;    -L, --languages &lt;file&gt;  use a custom languages.json&quot;</span>
+  , <span class="st">&quot;    -l, --layout &lt;name&gt;     choose a built-in layout &quot;</span> <span class="fu">++</span>
+                                 <span class="st">&quot;(parallel, linear)&quot;</span>
+  , <span class="st">&quot;    -o, --output &lt;path&gt;     use a custom output path&quot;</span>
+  , <span class="st">&quot;    -c, --css &lt;file&gt;        use a custom css file&quot;</span>
+  , <span class="st">&quot;    -t, --template &lt;file&gt;   use a custom pandoc template&quot;</span>
   ]
 </code></pre></div>
 <p>Finally, parse and handle certain flags then hyakko does the rest.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">main ::</span> <span class="dt">IO</span> ()
