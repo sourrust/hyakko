@@ -57,13 +57,15 @@ file](https://github.com/sourrust/hyakko/blob/master/resources/languages.json).
 > import qualified Text.Highlighting.Kate as K
 > import Text.Pandoc.Templates
 > import Text.Regex.PCRE ((=~))
-> import System.Console.CmdArgs
 > import System.Directory ( getDirectoryContents
 >                         , doesDirectoryExist
 >                         , doesFileExist
 >                         , createDirectoryIfMissing
 >                         , copyFile
 >                         )
+> import System.Console.Docopt.NoTH
+> import System.Environment (getArgs)
+> import System.Exit (exitSuccess)
 > import System.FilePath ( takeBaseName
 >                        , takeExtension
 >                        , takeFileName
