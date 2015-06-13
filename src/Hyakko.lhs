@@ -396,7 +396,7 @@ specifed, it will just use the ones in `defaultConfig`.
 >     , css        = getArg arguments $ longOption "css"
 >     , template   = getArg arguments $ longOption "template"
 >     , languages  = languageFile `argOrDefault` longOption "languages"
->     , dirOrFiles = getAllArgs arguments $ argument "files"
+>     , dirOrFiles = getAllArgs arguments $ argument "file"
 >     }
 
 **Configure** this particular run of hyakko. We might use a passed-in
@@ -419,7 +419,7 @@ interface along with the actually usage text used for the `help` flag.
 > hyakkoUsage :: IO Docopt
 > hyakkoUsage = parseUsageOrExit $ unlines
 >   [ ""
->   , "  Usage: hyakko [options] [<files>...]\n"
+>   , "  Usage: hyakko [options] [<file>...]\n"
 >   , "  Options:\n"
 >   , "    -h, --help              display this help message"
 >   , "    -V, --version           display current version"
