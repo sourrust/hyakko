@@ -57,13 +57,15 @@ file](https://github.com/sourrust/hyakko/blob/master/resources/languages.json).
 > import qualified Text.Highlighting.Kate as K
 > import Text.Pandoc.Templates
 > import Text.Regex.PCRE ((=~))
-> import System.Console.CmdArgs
 > import System.Directory ( getDirectoryContents
 >                         , doesDirectoryExist
 >                         , doesFileExist
 >                         , createDirectoryIfMissing
 >                         , copyFile
 >                         )
+> import System.Console.Docopt.NoTH
+> import System.Environment (getArgs)
+> import System.Exit (exitSuccess)
 > import System.FilePath ( takeBaseName
 >                        , takeExtension
 >                        , takeFileName
@@ -370,28 +372,32 @@ Copy all the files into the recently created directories.
 >         file = dirout </> (T.unpack $ T.replace oldLocation mempty x')
 >     copyFile x file
 
+Print information and exit hyakko when a flag is present. Mostly for
+`version` and `help` printing.
+
+> whenPresentPrintAndExit :: Arguments -> String -> String -> IO ()
+> whenPresentPrintAndExit arguments optName string =
+>   when (arguments `isPresent` longOption optName) $
+>     putStrLn string >> exitSuccess
+
 Configuration
 -------------
 
 Default configuration **options**. If no arguments for these flags are
 specifed, it will just use the ones in `defaultConfig`.
 
-> defaultConfig :: IO Hyakko
-> defaultConfig = do
+> defaultConfig :: Arguments -> IO Hyakko
+> defaultConfig arguments = do
+>   let argOrDefault = getArgWithDefault arguments
 >   languageFile <- getDataFileName $ "resources" </> "languages.json"
 >   return Hyakko
->     { layout     = Just "parallel" &= typ "LAYOUT"
->                 &= help "choose a built-in layout (parallel, linear)"
->     , output     = "docs"  &= typDir
->                 &= help "use a custom output path"
->     , css        = Nothing &= typFile
->                 &= help "use a custom css file"
->     , template   = Nothing &= typFile
->                 &= help "use a custom pandoc template"
->     , languages  = languageFile &= typFile
->                 &= help "use a custom languages.json"
->     , dirOrFiles = [] &= args &= typ "FILES/DIRS"
->     } &= summary ("hyakko v" ++ showVersion version)
+>     { layout     = Just $ "parallel" `argOrDefault` longOption "layout"
+>     , output     = "docs" `argOrDefault` longOption "output"
+>     , css        = getArg arguments $ longOption "css"
+>     , template   = getArg arguments $ longOption "template"
+>     , languages  = languageFile `argOrDefault` longOption "languages"
+>     , dirOrFiles = getAllArgs arguments $ argument "files"
+>     }
 
 **Configure** this particular run of hyakko. We might use a passed-in
 external template, or one of the built-in **layouts**.
@@ -407,13 +413,37 @@ external template, or one of the built-in **layouts**.
 >     else
 >       oldConfig { layout = Nothing }
 
-Finally, using [CmdArgs](http://community.haskell.org/~ndm/cmdargs/), define
-a command line interface. Parse options and hyakko does the rest.
+Using [docopt](https://github.com/docopt/docopt.hs), define a command line
+interface along with the actually usage text used for the `help` flag.
+
+> hyakkoUsage :: IO Docopt
+> hyakkoUsage = parseUsageOrExit $ unlines
+>   [ ""
+>   , "  Usage: hyakko [options] [<files>...]\n"
+>   , "  Options:\n"
+>   , "  -h, --help              display this help message"
+>   , "  -V, --version           display current version"
+>   , "  -L, --languages <file>  use a custom languages.json"
+>   , "  -l, --layout <name>     choose a built-in layout " ++
+>                                "(parallel, linear)"
+>   , "  -o, --output <path>     use a custom output path"
+>   , "  -c, --css <file>        use a custom css file"
+>   , "  -t, --template <file>   use a custom pandoc template"
+>   ]
+
+Finally, parse and handle certain flags then hyakko does the rest.
 
 > main :: IO ()
 > main = do
->   config  <- defaultConfig
->   options <- cmdArgs config
->   source  <- sources $ dirOrFiles options
+>   usage'    <- hyakkoUsage
+>   arguments <- getArgs
+>   options'  <- parseArgsOrExit usage' arguments
+>   options   <- defaultConfig options'
+>
+>   whenPresentPrintAndExit options' "version" $
+>     "hyakko v" ++ showVersion version
+>   whenPresentPrintAndExit options' "help" $ usage usage'
+>
+>   source <- sources $ dirOrFiles options
 >   createDirectoryIfMissing False $ output options
 >   generateDocumentation options source
