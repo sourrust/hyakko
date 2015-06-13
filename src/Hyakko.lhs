@@ -433,8 +433,15 @@ a command line interface. Parse options and hyakko does the rest.
 
 > main :: IO ()
 > main = do
->   config  <- defaultConfig
->   options <- cmdArgs config
->   source  <- sources $ dirOrFiles options
+>   usage'    <- hyakkoUsage
+>   arguments <- getArgs
+>   options'  <- parseArgsOrExit usage' arguments
+>   options   <- defaultConfig options'
+>
+>   whenPresentPrintAndExit options' "version" $
+>     "hyakko v" ++ showVersion version
+>   whenPresentPrintAndExit options' "help" $ usage usage'
+>
+>   source <- sources $ dirOrFiles options
 >   createDirectoryIfMissing False $ output options
 >   generateDocumentation options source
