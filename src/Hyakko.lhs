@@ -413,8 +413,8 @@ external template, or one of the built-in **layouts**.
 >     else
 >       oldConfig { layout = Nothing }
 
-Finally, using [CmdArgs](http://community.haskell.org/~ndm/cmdargs/), define
-a command line interface. Parse options and hyakko does the rest.
+Using [docopt](https://github.com/docopt/docopt.hs), define a command line
+interface along with the actually usage text used for the `help` flag.
 
 > hyakkoUsage :: IO Docopt
 > hyakkoUsage = parseUsageOrExit $ unlines
@@ -430,6 +430,8 @@ a command line interface. Parse options and hyakko does the rest.
 >   , "  -c, --css <file>        use a custom css file"
 >   , "  -t, --template <file>   use a custom pandoc template"
 >   ]
+
+Finally, parse and handle certain flags then hyakko does the rest.
 
 > main :: IO ()
 > main = do
