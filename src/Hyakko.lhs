@@ -421,14 +421,14 @@ interface along with the actually usage text used for the `help` flag.
 >   [ ""
 >   , "  Usage: hyakko [options] [<files>...]\n"
 >   , "  Options:\n"
->   , "  -h, --help              display this help message"
->   , "  -V, --version           display current version"
->   , "  -L, --languages <file>  use a custom languages.json"
->   , "  -l, --layout <name>     choose a built-in layout " ++
->                                "(parallel, linear)"
->   , "  -o, --output <path>     use a custom output path"
->   , "  -c, --css <file>        use a custom css file"
->   , "  -t, --template <file>   use a custom pandoc template"
+>   , "    -h, --help              display this help message"
+>   , "    -V, --version           display current version"
+>   , "    -L, --languages <file>  use a custom languages.json"
+>   , "    -l, --layout <name>     choose a built-in layout " ++
+>                                  "(parallel, linear)"
+>   , "    -o, --output <path>     use a custom output path"
+>   , "    -c, --css <file>        use a custom css file"
+>   , "    -t, --template <file>   use a custom pandoc template"
 >   ]
 
 Finally, parse and handle certain flags then hyakko does the rest.
