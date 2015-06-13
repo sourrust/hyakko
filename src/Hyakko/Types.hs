@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Hyakko.Types where
 
@@ -6,7 +6,6 @@ import Control.Applicative ((<$>), (<*>), empty)
 import Data.Aeson
 import Data.HashMap.Strict (HashMap)
 import Data.Text (Text)
-import System.Console.CmdArgs
 
 -- The `Sections` type is just an alias to keep type signatures short.
 type Sections = [HashMap String Text]
@@ -40,4 +39,4 @@ data Hyakko =
          , template   :: Maybe FilePath
          , languages  :: FilePath
          , dirOrFiles :: [FilePath]
-         } deriving (Show, Data, Typeable)
+         } deriving (Show)
