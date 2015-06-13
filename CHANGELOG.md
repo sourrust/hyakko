@@ -4,6 +4,10 @@
 
 * CLI option `languages` for custom languages.json
 
+### Changed
+
+* Argument parsing from `cmdargs` to `docopt`
+
 ## [0.6.7] - 2015-06-02
 
 ### Added
