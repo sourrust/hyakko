@@ -410,6 +410,21 @@ external template, or one of the built-in **layouts**.
 Finally, using [CmdArgs](http://community.haskell.org/~ndm/cmdargs/), define
 a command line interface. Parse options and hyakko does the rest.
 
+> hyakkoUsage :: IO Docopt
+> hyakkoUsage = parseUsageOrExit $ unlines
+>   [ ""
+>   , "  Usage: hyakko [options] [<files>...]\n"
+>   , "  Options:\n"
+>   , "  -h, --help              display this help message"
+>   , "  -V, --version           display current version"
+>   , "  -L, --languages <file>  use a custom languages.json"
+>   , "  -l, --layout <name>     choose a built-in layout " ++
+>                                "(parallel, linear)"
+>   , "  -o, --output <path>     use a custom output path"
+>   , "  -c, --css <file>        use a custom css file"
+>   , "  -t, --template <file>   use a custom pandoc template"
+>   ]
+
 > main :: IO ()
 > main = do
 >   config  <- defaultConfig
