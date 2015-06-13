@@ -370,28 +370,32 @@ Copy all the files into the recently created directories.
 >         file = dirout </> (T.unpack $ T.replace oldLocation mempty x')
 >     copyFile x file
 
+Print information and exit hyakko when a flag is present. Mostly for
+`version` and `help` printing.
+
+> whenPresentPrintAndExit :: Arguments -> String -> String -> IO ()
+> whenPresentPrintAndExit arguments optName string =
+>   when (arguments `isPresent` longOption optName) $
+>     putStrLn string >> exitSuccess
+
 Configuration
 -------------
 
 Default configuration **options**. If no arguments for these flags are
 specifed, it will just use the ones in `defaultConfig`.
 
-> defaultConfig :: IO Hyakko
-> defaultConfig = do
+> defaultConfig :: Arguments -> IO Hyakko
+> defaultConfig arguments = do
+>   let argOrDefault = getArgWithDefault arguments
 >   languageFile <- getDataFileName $ "resources" </> "languages.json"
 >   return Hyakko
->     { layout     = Just "parallel" &= typ "LAYOUT"
->                 &= help "choose a built-in layout (parallel, linear)"
->     , output     = "docs"  &= typDir
->                 &= help "use a custom output path"
->     , css        = Nothing &= typFile
->                 &= help "use a custom css file"
->     , template   = Nothing &= typFile
->                 &= help "use a custom pandoc template"
->     , languages  = languageFile &= typFile
->                 &= help "use a custom languages.json"
->     , dirOrFiles = [] &= args &= typ "FILES/DIRS"
->     } &= summary ("hyakko v" ++ showVersion version)
+>     { layout     = Just $ "parallel" `argOrDefault` longOption "layout"
+>     , output     = "docs" `argOrDefault` longOption "output"
+>     , css        = getArg arguments $ longOption "css"
+>     , template   = getArg arguments $ longOption "template"
+>     , languages  = languageFile `argOrDefault` longOption "languages"
+>     , dirOrFiles = getAllArgs arguments $ argument "files"
+>     }
 
 **Configure** this particular run of hyakko. We might use a passed-in
 external template, or one of the built-in **layouts**.
