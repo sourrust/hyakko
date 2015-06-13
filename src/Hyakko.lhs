@@ -40,7 +40,6 @@ file](https://github.com/sourrust/hyakko/blob/master/resources/languages.json).
 
 > import Data.Aeson (decode', Value(..))
 > import qualified Data.HashMap.Strict as M
-> import Data.ByteString.Lazy.Char8 (ByteString)
 > import qualified Data.ByteString.Lazy.Char8 as L
 > import Data.Text (Text)
 > import qualified Data.Text as T
@@ -50,7 +49,6 @@ file](https://github.com/sourrust/hyakko/blob/master/resources/languages.json).
 > import Data.Monoid
 > import Data.Version (showVersion)
 > import Control.Applicative ((<$>))
-> import Control.Monad (filterM, (>=>), forM, forM_, unless, when)
 > import Control.Monad.State.Strict
 > import qualified Text.Blaze.Html as B
 > import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
@@ -237,7 +235,7 @@ template found in `resources/linear/hyakko.html` or
 >         else
 >           ([("header", header)], count)
 >   source <- sources $ dirOrFiles opts
->   html <- hyakkoTemplate opts . varListToJSON $ concat
+>   html   <- hyakkoTemplate opts . varListToJSON $ concat
 >     [ [("title", if isHeader then getHeader header else title)]
 >     , h
 >     , cssTemplate opts
@@ -268,10 +266,6 @@ Simpler type signatuted regex replace function.
 >       reg'       = L.pack $ T.unpack reg
 >       (_, _, rp) = str =~ reg' :: (String, String, String)
 >   in y <> (T.pack rp)
-
-> readLanguageFile :: IO ByteString
-> readLanguageFile = getDataFileName "resources/languages.json"
->                >>= L.readFile
 
 From a `languages.json` file, transform the data into useful list of
 language information inside the JSON.
@@ -342,8 +336,8 @@ sub-directories.
 >   let reg = L.pack "[^(^\\.{1,2}$)]"
 >   content <-  filter (=~ reg) <$> getDirectoryContents d
 >   let content' = map (d </>) content
->   files <- filterM doesFileExist content'
->   subdir <- filterM doesDirectoryExist content'
+>   files      <- filterM doesFileExist content'
+>   subdir     <- filterM doesDirectoryExist content'
 >   subcontent <- fmap (\x -> (concatMap fst x, concatMap snd x))
 >                      (mapM unpackDirectories subdir)
 >   return (files ++ fst subcontent, subdir ++ snd subcontent)
@@ -396,7 +390,7 @@ specifed, it will just use the ones in `defaultConfig`.
 >     , css        = getArg arguments $ longOption "css"
 >     , template   = getArg arguments $ longOption "template"
 >     , languages  = languageFile `argOrDefault` longOption "languages"
->     , dirOrFiles = getAllArgs arguments $ argument "files"
+>     , dirOrFiles = getAllArgs arguments $ argument "file"
 >     }
 
 **Configure** this particular run of hyakko. We might use a passed-in
@@ -419,16 +413,16 @@ interface along with the actually usage text used for the `help` flag.
 > hyakkoUsage :: IO Docopt
 > hyakkoUsage = parseUsageOrExit $ unlines
 >   [ ""
->   , "  Usage: hyakko [options] [<files>...]\n"
+>   , "  Usage: hyakko [options] [<file>...]\n"
 >   , "  Options:\n"
->   , "  -h, --help              display this help message"
->   , "  -V, --version           display current version"
->   , "  -L, --languages <file>  use a custom languages.json"
->   , "  -l, --layout <name>     choose a built-in layout " ++
->                                "(parallel, linear)"
->   , "  -o, --output <path>     use a custom output path"
->   , "  -c, --css <file>        use a custom css file"
->   , "  -t, --template <file>   use a custom pandoc template"
+>   , "    -h, --help              display this help message"
+>   , "    -V, --version           display current version"
+>   , "    -L, --languages <file>  use a custom languages.json"
+>   , "    -l, --layout <name>     choose a built-in layout " ++
+>                                  "(parallel, linear)"
+>   , "    -o, --output <path>     use a custom output path"
+>   , "    -c, --css <file>        use a custom css file"
+>   , "    -t, --template <file>   use a custom pandoc template"
 >   ]
 
 Finally, parse and handle certain flags then hyakko does the rest.
