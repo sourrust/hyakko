@@ -11,7 +11,7 @@ bug-reports:      https://github.com/sourrust/hyakko/issues
 stability:        beta
 homepage:         http://sourrust.github.io/hyakko/
 category:         Documentation
-tested-with:      GHC == 7.4.2
+tested-with:      GHC == 7.4.2, GHC == 7.8.3, GHC == 7.10.1
 synopsis:         Literate-style Documentation Generator
 description:      Hyakko is a Haskell port of Docco: the original
                   quick-and-dirty, hundred-line-long,
