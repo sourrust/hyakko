@@ -175,7 +175,7 @@ style language. If it is normal, `fromLiterate` for returns the same list of
 >                     hasLitSymbol = x' =~ (L.pack $ T.unpack r)
 
 >                 when hasLitSymbol $
->                   put (ys ++ [replace r x mempty], False)
+>                   put (ys <> [replace r x mempty], False)
 
 Inserts a comment symbol and a single space into the documentation line and
 check if the last line was code and documentation. If the previous line was
@@ -184,9 +184,9 @@ datatype; otherwise it will return just the comment symbol.
 
 >                 unless hasLitSymbol $
 >                   case (x' =~ r1, isText) of
->                     (True, True)  -> put (ys ++ [s], True)
->                     (True, False) -> put (ys ++ [mempty], False)
->                     (False, _)    -> put (ys ++ [s <> " " <> x], True)
+>                     (True, True)  -> put (ys <> [s], True)
+>                     (True, False) -> put (ys <> [mempty], False)
+>                     (False, _)    -> put (ys <> [s <> " " <> x], True)
 >           in fst . snd $ runState fn (mempty, True)
 
 Highlights the current file of code, using **Kate**, and outputs the the
