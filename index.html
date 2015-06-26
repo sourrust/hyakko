@@ -14,6 +14,15 @@
       <div class="header">
                 <h1 id="hyakko">Hyakko</h1>
         
+                <div class="toc">
+          <h3>Table of Contents</h3>
+          <ol>
+                        <li><a class="source" href="Hyakko.html">Hyakko.lhs</a></li>
+                        <li><a class="source" href="Markdown.html">Markdown.hs</a></li>
+                        <li><a class="source" href="Templates.html">Templates.hs</a></li>
+                        <li><a class="source" href="Types.html">Types.hs</a></li>
+                      </ol>
+        </div>
               </div>
 
 <p><strong>Hyakko</strong> is a Haskell port of <a href="http://jashkenas.github.com/docco/">docco</a>: the original quick-and-dirty documentation generate. It produces an HTML document that displays your comments intermingled with you code. All prose is passed through <a href="http://daringfireball.net/projects/markdown/syntax">Markdown</a>, and code is passed through <a href="http://johnmacfarlane.net/highlighting-kate/">Kate</a> syntax highlighing. This page is the result of running Hyakko against its own <a href="https://github.com/sourrust/hyakko/blob/master/src/Hyakko.lhs">source file</a>.</p>
@@ -67,8 +76,7 @@
 </code></pre></div>
 <h2 id="main-documentation-generation-functions">Main Documentation Generation Functions</h2>
 <p>Generate the documentation for our configured source file by copyinh over static assets, reading all the source files in, splitting them up into prose+code sections, highlighting each file in the approapiate language, and printing them out in an HTML template.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">generateDocumentation ::</span> <span class="dt">Hyakko</span> <span class="ot">-&gt;</span> [FilePath] <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
-generateDocumentation _ [] <span class="fu">=</span>
-  putStrLn <span class="st">&quot;hyakko: no files or options given (try --help)&quot;</span>
+generateDocumentation _ []    <span class="fu">=</span> hyakkoUsage <span class="fu">&gt;&gt;=</span> putStrLn <span class="fu">.</span> usage
 generateDocumentation opts xs <span class="fu">=</span> <span class="kw">do</span>
   dataDir <span class="ot">&lt;-</span> getDataDir
   <span class="kw">let</span> options  <span class="fu">=</span> configHyakko opts dataDir
@@ -142,16 +150,17 @@ parse (<span class="dt">Just</span> src) code <span class="fu">=</span>
               r1 <span class="fu">=</span> L.pack <span class="st">&quot;^\\s*$&quot;</span>
               fn <span class="fu">=</span> forM xs <span class="fu">$</span> \x <span class="ot">-&gt;</span> <span class="kw">do</span>
                 (ys, isText) <span class="ot">&lt;-</span> get
-                <span class="kw">let</span> hasLitSymbol <span class="fu">=</span> T.unpack x <span class="fu">=~</span> (L.pack <span class="fu">$</span> T.unpack r)
+                <span class="kw">let</span> x&#39;           <span class="fu">=</span> T.unpack x
+                    hasLitSymbol <span class="fu">=</span> x&#39; <span class="fu">=~</span> (L.pack <span class="fu">$</span> T.unpack r)
 
                 when hasLitSymbol <span class="fu">$</span>
-                  put (ys <span class="fu">++</span> [replace r x mempty], <span class="dt">False</span>)
+                  put (ys <span class="fu">&lt;&gt;</span> [replace r x mempty], <span class="dt">False</span>)
 </code></pre></div>
 <p>Inserts a comment symbol and a single space into the documentation line and check if the last line was code and documentation. If the previous line was code and the line is blank or has just whitespace, it returns a blank <code>Text</code> datatype; otherwise it will return just the comment symbol.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode">                unless hasLitSymbol <span class="fu">$</span>
-                  <span class="kw">case</span> (T.unpack x <span class="fu">=~</span> r1, isText) <span class="kw">of</span>
-                    (<span class="dt">True</span>, <span class="dt">True</span>)  <span class="ot">-&gt;</span> put (ys <span class="fu">++</span> [s], <span class="dt">True</span>)
-                    (<span class="dt">True</span>, <span class="dt">False</span>) <span class="ot">-&gt;</span> put (ys <span class="fu">++</span> [mempty], <span class="dt">False</span>)
-                    (<span class="dt">False</span>, _)    <span class="ot">-&gt;</span> put (ys <span class="fu">++</span> [s <span class="fu">&lt;&gt;</span> <span class="st">&quot; &quot;</span> <span class="fu">&lt;&gt;</span> x], <span class="dt">True</span>)
+                  <span class="kw">case</span> (x&#39; <span class="fu">=~</span> r1, isText) <span class="kw">of</span>
+                    (<span class="dt">True</span>, <span class="dt">True</span>)  <span class="ot">-&gt;</span> put (ys <span class="fu">&lt;&gt;</span> [s], <span class="dt">True</span>)
+                    (<span class="dt">True</span>, <span class="dt">False</span>) <span class="ot">-&gt;</span> put (ys <span class="fu">&lt;&gt;</span> [mempty], <span class="dt">False</span>)
+                    (<span class="dt">False</span>, _)    <span class="ot">-&gt;</span> put (ys <span class="fu">&lt;&gt;</span> [s <span class="fu">&lt;&gt;</span> <span class="st">&quot; &quot;</span> <span class="fu">&lt;&gt;</span> x], <span class="dt">True</span>)
           <span class="kw">in</span> fst <span class="fu">.</span> snd <span class="fu">$</span> runState fn (mempty, <span class="dt">True</span>)
 </code></pre></div>
 <p>Highlights the current file of code, using <strong>Kate</strong>, and outputs the the highlighted html to its caller.</p><div class="sourceCode"><pre class="sourceCode"><code class="sourceCode"><span class="ot">highlight ::</span> <span class="dt">Maybe</span> <span class="dt">Language</span> <span class="ot">-&gt;</span> <span class="dt">Sections</span> <span class="ot">-&gt;</span> [<span class="dt">Text</span>]
