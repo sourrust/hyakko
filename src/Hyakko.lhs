@@ -171,7 +171,8 @@ style language. If it is normal, `fromLiterate` for returns the same list of
 >               r1 = L.pack "^\\s*$"
 >               fn = forM xs $ \x -> do
 >                 (ys, isText) <- get
->                 let hasLitSymbol = T.unpack x =~ (L.pack $ T.unpack r)
+>                 let x'           = T.unpack x
+>                     hasLitSymbol = x' =~ (L.pack $ T.unpack r)
 
 >                 when hasLitSymbol $
 >                   put (ys ++ [replace r x mempty], False)
@@ -182,7 +183,7 @@ code and the line is blank or has just whitespace, it returns a blank `Text`
 datatype; otherwise it will return just the comment symbol.
 
 >                 unless hasLitSymbol $
->                   case (T.unpack x =~ r1, isText) of
+>                   case (x' =~ r1, isText) of
 >                     (True, True)  -> put (ys ++ [s], True)
 >                     (True, False) -> put (ys ++ [mempty], False)
 >                     (False, _)    -> put (ys ++ [s <> " " <> x], True)
