@@ -81,8 +81,7 @@ prose+code sections, highlighting each file in the approapiate language, and
 printing them out in an HTML template.
 
 > generateDocumentation :: Hyakko -> [FilePath] -> IO ()
-> generateDocumentation _ [] =
->   putStrLn "hyakko: no files or options given (try --help)"
+> generateDocumentation _ []    = hyakkoUsage >>= putStrLn . usage
 > generateDocumentation opts xs = do
 >   dataDir <- getDataDir
 >   let options  = configHyakko opts dataDir
